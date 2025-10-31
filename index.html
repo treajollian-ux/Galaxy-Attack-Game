@@ -1641,6 +1641,26 @@
                 console.log('🎮 اللعبة جاهزة!');
             }, 2000);
         });
+        // ... الكود الحالي ...
+
+// ===== إنشاء أصوات أساسية برمجياً =====
+function createBasicSounds() {
+    console.log('🔊 جاهز لاستخدام الأصوات الأساسية');
+    
+    const shootAudio = document.getElementById('shootSound');
+    const explosionAudio = document.getElementById('explosionSound');
+    const coinAudio = document.getElementById('coinSound');
+    
+    if (shootAudio && explosionAudio && coinAudio) {
+        console.log('✅ جميع عناصر الصوت جاهزة');
+    }
+}
+
+// تشغيل عند التحميل
+createBasicSounds();
+
+});
+    // نهاية window.addEventListener إذا كانت موجودة
     </script>
 </body>
 </html>
