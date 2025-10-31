@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galaxy Attack</title>
+    <title>Galaxy Attack - لعبة space shooter كاملة</title>
     <style>
         * {
             margin: 0;
@@ -11,21 +11,31 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --accent-color: #06d6a0;
+            --danger-color: #ef4444;
+            --background: #0f0f23;
+            --text-primary: #ffffff;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0c0c2e, #1a1a4a);
-            color: white;
+            background: var(--background);
+            color: var(--text-primary);
             overflow: hidden;
             direction: rtl;
         }
 
+        /* شاشة التحميل */
         #loadingScreen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #0c0c2e, #1a1a4a);
+            background: var(--background);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -40,7 +50,7 @@
             width: 60px;
             height: 60px;
             border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid #4fc3f7;
+            border-top: 4px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -51,6 +61,7 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* النظام الأساسي للشاشات */
         .screen {
             display: none;
             position: fixed;
@@ -58,7 +69,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #0c0c2e, #1a1a4a);
+            background: var(--background);
         }
 
         .screen.active {
@@ -74,28 +85,337 @@
             text-align: center;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
         }
 
-        .menu-btn {
-            padding: 15px 30px;
-            font-size: 1.2em;
-            background: #2196f3;
-            color: white;
+        /* الهيدر مع العملات والإعدادات */
+        .game-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .player-stats {
+            display: flex;
+            gap: 15px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: rgba(255,255,255,0.1);
             border: none;
-            border-radius: 10px;
-            margin: 10px;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.2em;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+
+        /* الأيقونات السفلية */
+        .bottom-nav {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .nav-btn span {
+            font-size: 0.6em;
+        }
+
+        .nav-btn:hover {
+            background: var(--primary-color);
+            transform: translateY(-5px);
+        }
+
+        .nav-btn.active {
+            background: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        /* أزرار القائمة */
+        .menu-btn {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            margin: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            justify-content: center;
+        }
+
         .menu-btn:hover {
-            transform: translateY(-2px);
-            background: #1976d2;
+            transform: translateY(-3px);
+            background: var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .menu-btn.secondary {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .menu-btn.secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* شبكة المستويات */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 12px;
+            margin: 25px 0;
+            max-width: 500px;
+        }
+
+        .level-btn {
+            width: 70px;
+            height: 70px;
+            border: none;
+            border-radius: 15px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .level-btn.locked {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .level-btn.completed {
+            background: var(--accent-color);
+        }
+
+        .level-btn.current {
+            background: var(--secondary-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .level-btn:hover:not(.locked) {
+            transform: scale(1.1);
+        }
+
+        /* شاشة اللعبة */
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .game-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .game-ui > * {
+            pointer-events: auto;
+        }
+
+        .game-stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .health-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .game-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* عناصر اللعبة المرئية */
+        .player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .enemy {
+            position: absolute;
+            background: var(--danger-color);
+            border-radius: 8px;
+            z-index: 5;
+        }
+
+        .bullet {
+            position: absolute;
+            background: #4fc3f7;
+            border-radius: 2px;
+            z-index: 8;
+        }
+
+        .explosion {
+            position: absolute;
+            background: #ff9800;
+            border-radius: 50%;
+            z-index: 9;
+            animation: explode 0.5s ease-out;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* تأثيرات النص العائم */
+        .floating-text {
+            position: absolute;
+            color: #ffd54f;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 100;
+            animation: floatUp 1.5s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+
+        /* تصميم متجاوب */
+        @media (max-width: 768px) {
+            .screen-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .level-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+            
+            .level-btn {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .bottom-nav {
+                padding: 10px 15px;
+            }
+            
+            .nav-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2em;
+            }
+            
+            .nav-btn span {
+                font-size: 0.5em;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
+    <!-- شاشة التحميل -->
     <div id="loadingScreen">
         <div class="loading-content">
             <div class="loader"></div>
@@ -104,83 +424,230 @@
         </div>
     </div>
 
-    <!-- Start Screen -->
+    <!-- الشاشة الرئيسية -->
     <div id="startScreen" class="screen">
+        <div class="game-header">
+            <div class="player-stats">
+                <div class="stat-item">
+                    <span>💰</span>
+                    <span id="totalCoins">1000</span>
+                </div>
+                <div class="stat-item">
+                    <span>💎</span>
+                    <span id="totalGems">50</span>
+                </div>
+                <div class="stat-item">
+                    <span>⭐</span>
+                    <span id="playerLevel">1</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="icon-btn" onclick="showScreen('settingsScreen')">⚙️</button>
+                <button class="icon-btn" onclick="toggleSound()">🔊</button>
+            </div>
+        </div>
+
         <div class="screen-content">
-            <h1>🌌 Galaxy Attack</h1>
-            <div style="margin: 30px 0;">
-                <button class="menu-btn" onclick="showScreen('levelSelectScreen')">🎮 بدء اللعبة</button>
-                <button class="menu-btn" onclick="showScreen('shipsScreen')">🚀 الأسطول</button>
-                <button class="menu-btn" onclick="showScreen('upgradesScreen')">⚡ الترقيات</button>
+            <h1 style="font-size: 3em; margin-bottom: 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🌌 Galaxy Attack</h1>
+            
+            <div class="main-menu">
+                <button class="menu-btn" onclick="showScreen('levelSelectScreen')">
+                    <span>🎮</span>
+                    <span>بدء المغامرة</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('shipsScreen')">
+                    <span>🚀</span>
+                    <span>الأسطول الفضائي</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('upgradesScreen')">
+                    <span>⚡</span>
+                    <span>مركز الترقيات</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('missionsScreen')">
+                    <span>🎯</span>
+                    <span>المهام اليومية</span>
+                </button>
             </div>
-            <div>
-                <p>💰 العملات: <span id="coins">1000</span></p>
-                <p>💎 الأحجار: <span id="gems">50</span></p>
-            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="nav-btn active" onclick="showScreen('startScreen')">
+                <span>🏠</span>
+                <span>الرئيسية</span>
+            </button>
+            <button class="nav-btn" onclick="showScreen('shipsScreen')">
+                <span>🚀</span>
+                <span>الأسطول</span>
+            </button>
+            <button class="nav-btn" onclick="showScreen('upgradesScreen')">
+                <span>⚡</span>
+                <span>الترقيات</span>
+            </button>
+            <button class="nav-btn" onclick="showScreen('missionsScreen')">
+                <span>🎯</span>
+                <span>المهام</span>
+            </button>
+            <button class="nav-btn" onclick="showScreen('rewardsScreen')">
+                <span>🎁</span>
+                <span>المكافآت</span>
+            </button>
         </div>
     </div>
 
-    <!-- Level Select Screen -->
+    <!-- شاشة اختيار المستوى -->
     <div id="levelSelectScreen" class="screen">
+        <div class="game-header">
+            <div class="player-stats">
+                <div class="stat-item">
+                    <span>💰</span>
+                    <span id="levelsCoins">1000</span>
+                </div>
+                <div class="stat-item">
+                    <span>💎</span>
+                    <span id="levelsGems">50</span>
+                </div>
+            </div>
+            <button class="icon-btn" onclick="showScreen('startScreen')">←</button>
+        </div>
+
         <div class="screen-content">
             <h2>🎯 اختر المستوى</h2>
-            <div id="levelGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px 0;">
+            <div class="level-grid" id="levelGrid">
                 <!-- المستويات سيتم إنشاؤها بالجافاسكريبت -->
             </div>
-            <button class="menu-btn" onclick="showScreen('startScreen')">← العودة</button>
         </div>
     </div>
 
-    <!-- Ships Screen -->
+    <!-- شاشة الأسطول -->
     <div id="shipsScreen" class="screen">
+        <div class="game-header">
+            <div class="player-stats">
+                <div class="stat-item">
+                    <span>💰</span>
+                    <span id="shipsCoins">1000</span>
+                </div>
+                <div class="stat-item">
+                    <span>💎</span>
+                    <span id="shipsGems">50</span>
+                </div>
+            </div>
+            <button class="icon-btn" onclick="showScreen('startScreen')">←</button>
+        </div>
+
         <div class="screen-content">
             <h2>🚀 الأسطول الفضائي</h2>
-            <div id="shipsContainer" style="margin: 20px 0;">
+            <div id="shipsContainer" style="margin: 20px 0; display: grid; gap: 15px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
                 <!-- السفن سيتم إنشاؤها بالجافاسكريبت -->
             </div>
-            <button class="menu-btn" onclick="showScreen('startScreen')">← العودة</button>
         </div>
     </div>
 
-    <!-- Upgrades Screen -->
+    <!-- شاشة الترقيات -->
     <div id="upgradesScreen" class="screen">
+        <div class="game-header">
+            <div class="player-stats">
+                <div class="stat-item">
+                    <span>💰</span>
+                    <span id="upgradesCoins">1000</span>
+                </div>
+                <div class="stat-item">
+                    <span>💎</span>
+                    <span id="upgradesGems">50</span>
+                </div>
+            </div>
+            <button class="icon-btn" onclick="showScreen('startScreen')">←</button>
+        </div>
+
         <div class="screen-content">
             <h2>⚡ مركز الترقيات</h2>
-            <div id="upgradesContainer" style="margin: 20px 0;">
+            <div id="upgradesContainer" style="margin: 20px 0; display: grid; gap: 15px;">
                 <!-- الترقيات سيتم إنشاؤها بالجافاسكريبت -->
             </div>
-            <button class="menu-btn" onclick="showScreen('startScreen')">← العودة</button>
         </div>
     </div>
 
-    <!-- Game Screen -->
+    <!-- شاشة اللعبة -->
     <div id="gameScreen" class="screen">
-        <canvas id="gameCanvas" style="position: absolute; top:0; left:0; width:100%; height:100%;"></canvas>
-        <div style="position: absolute; top:20px; left:20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px;">
-            <p>المستوى: <span id="currentLevel">1</span></p>
-            <p>النقاط: <span id="currentScore">0</span></p>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="game-ui">
+            <div class="game-stats">
+                <div style="margin-bottom: 8px;">المستوى: <span id="currentLevel">1</span></div>
+                <div style="margin-bottom: 8px;">النقاط: <span id="currentScore">0</span></div>
+                <div>💰 <span id="gameCoins">0</span> | 💎 <span id="gameGems">0</span></div>
+            </div>
+            
+            <div class="health-bar">
+                <div class="health-fill" id="healthFill" style="width: 100%;"></div>
+            </div>
+            
+            <div class="game-controls">
+                <button class="icon-btn" onclick="pauseGame()">⏸️</button>
+                <button class="icon-btn" onclick="showScreen('startScreen')">🏠</button>
+            </div>
         </div>
-        <button class="menu-btn" onclick="showScreen('startScreen')" style="position: absolute; bottom:20px; right:20px;">🏠 خروج</button>
+    </div>
+
+    <!-- شاشة الإعدادات -->
+    <div id="settingsScreen" class="screen">
+        <div class="game-header">
+            <button class="icon-btn" onclick="showScreen('startScreen')">←</button>
+        </div>
+        <div class="screen-content">
+            <h2>⚙️ الإعدادات</h2>
+            <div style="text-align: right; margin: 20px 0;">
+                <div style="margin: 15px 0;">
+                    <label>🔊 صوت المؤثرات</label>
+                    <input type="range" min="0" max="100" value="80" style="width: 200px;">
+                </div>
+                <div style="margin: 15px 0;">
+                    <label>🎵 صوت الموسيقى</label>
+                    <input type="range" min="0" max="100" value="60" style="width: 200px;">
+                </div>
+            </div>
+            <button class="menu-btn" onclick="resetGame()">🔄 إعادة تعيين اللعبة</button>
+        </div>
     </div>
 
     <script>
-        // ===== الكود الأساسي المبسط =====
-        console.log('🌌 بدء تحميل Galaxy Attack...');
-
-        // بيانات اللعبة
+        // ===== بيانات اللعبة =====
         let gameData = {
             coins: 1000,
             gems: 50,
             currentLevel: 1,
-            unlockedLevels: 1,
+            unlockedLevels: 5,
             selectedShip: 'basic',
             upgrades: {
                 weapon: 1,
-                shield: 1
+                fireRate: 1,
+                shield: 1,
+                health: 1
+            },
+            ships: {
+                basic: { unlocked: true, level: 1 },
+                fighter: { unlocked: false, level: 1 },
+                tank: { unlocked: false, level: 1 },
+                sniper: { unlocked: false, level: 1 }
             }
         };
 
-        // دالة إظهار الشاشات
+        // ===== متغيرات اللعبة =====
+        let game = {
+            canvas: null,
+            ctx: null,
+            player: null,
+            enemies: [],
+            bullets: [],
+            enemyBullets: [],
+            particles: [],
+            loot: [],
+            keys: {},
+            score: 0,
+            isPaused: false,
+            lastShot: 0
+        };
+
+        // ===== دوال النظام الأساسي =====
         function showScreen(screenName) {
             console.log('🔄 الانتقال إلى:', screenName);
             
@@ -193,14 +660,22 @@
             const targetScreen = document.getElementById(screenName);
             if (targetScreen) {
                 targetScreen.classList.add('active');
-                
-                // تحديث محتوى الشاشة إذا لزم الأمر
                 updateScreenContent(screenName);
+            }
+
+            // تحديث الأزرار النشطة في القائمة السفلية
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            if (screenName === 'startScreen') {
+                document.querySelector('.nav-btn').classList.add('active');
             }
         }
 
-        // تحديث محتوى الشاشات
         function updateScreenContent(screenName) {
+            // تحديث العملات في جميع الشاشات
+            updateCurrencyDisplay();
+            
             switch(screenName) {
                 case 'levelSelectScreen':
                     generateLevels();
@@ -211,30 +686,41 @@
                 case 'upgradesScreen':
                     generateUpgrades();
                     break;
+                case 'gameScreen':
+                    startGame();
+                    break;
             }
-            
-            // تحديث العملات دائماً
-            document.getElementById('coins').textContent = gameData.coins;
-            document.getElementById('gems').textContent = gameData.gems;
         }
 
-        // إنشاء المستويات
+        function updateCurrencyDisplay() {
+            document.querySelectorAll('#totalCoins, #levelsCoins, #shipsCoins, #upgradesCoins, #gameCoins').forEach(el => {
+                el.textContent = gameData.coins;
+            });
+            document.querySelectorAll('#totalGems, #levelsGems, #shipsGems, #upgradesGems, #gameGems').forEach(el => {
+                el.textContent = gameData.gems;
+            });
+        }
+
+        // ===== إنشاء المحتوى =====
         function generateLevels() {
             const levelGrid = document.getElementById('levelGrid');
             levelGrid.innerHTML = '';
             
             for (let i = 1; i <= 20; i++) {
                 const levelBtn = document.createElement('button');
-                levelBtn.className = 'menu-btn';
-                levelBtn.textContent = i;
-                levelBtn.style.width = '60px';
-                levelBtn.style.height = '60px';
+                levelBtn.className = 'level-btn';
+                levelBtn.innerHTML = i;
                 
                 if (i > gameData.unlockedLevels) {
-                    levelBtn.disabled = true;
-                    levelBtn.textContent = '🔒';
-                    levelBtn.style.background = '#666';
-                } else {
+                    levelBtn.classList.add('locked');
+                    levelBtn.innerHTML = '🔒';
+                } else if (i === gameData.currentLevel) {
+                    levelBtn.classList.add('current');
+                } else if (i < gameData.currentLevel) {
+                    levelBtn.classList.add('completed');
+                }
+                
+                if (i <= gameData.unlockedLevels) {
                     levelBtn.onclick = () => startLevel(i);
                 }
                 
@@ -242,35 +728,43 @@
             }
         }
 
-        // إنشاء السفن
         function generateShips() {
             const shipsContainer = document.getElementById('shipsContainer');
             shipsContainer.innerHTML = '';
             
             const ships = [
-                { id: 'basic', name: 'الطائرة الأساسية', price: 0, unlocked: true },
-                { id: 'fighter', name: 'المقاتلة السريعة', price: 500, unlocked: false },
-                { id: 'tank', name: 'الدبابة الفضائية', price: 800, unlocked: false }
+                { id: 'basic', name: '🚀 الطائرة الأساسية', price: 0, stats: '❤️ 100 ⚡ 8 💥 25' },
+                { id: 'fighter', name: '🛸 المقاتلة السريعة', price: 500, stats: '❤️ 80 ⚡ 12 💥 20' },
+                { id: 'tank', name: '🛡️ الدبابة الفضائية', price: 800, stats: '❤️ 200 ⚡ 5 💥 35' },
+                { id: 'sniper', name: '🎯 القناصة', price: 1200, stats: '❤️ 90 ⚡ 7 💥 60' }
             ];
             
             ships.forEach(ship => {
+                const isUnlocked = gameData.ships[ship.id].unlocked;
+                const isSelected = gameData.selectedShip === ship.id;
+                
                 const shipDiv = document.createElement('div');
-                shipDiv.style.background = 'rgba(255,255,255,0.1)';
-                shipDiv.style.padding = '15px';
-                shipDiv.style.margin = '10px';
-                shipDiv.style.borderRadius = '10px';
-                shipDiv.style.border = gameData.selectedShip === ship.id ? '2px solid #4fc3f7' : 'none';
+                shipDiv.style.background = isSelected ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255,255,255,0.1)';
+                shipDiv.style.padding = '20px';
+                shipDiv.style.borderRadius = '15px';
+                shipDiv.style.border = isSelected ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.2)';
+                shipDiv.style.textAlign = 'center';
                 
                 shipDiv.innerHTML = `
-                    <h3>🚀 ${ship.name}</h3>
-                    <p>${ship.unlocked ? 'مفتوحة' : 'سعر: ' + ship.price + ' 💰'}</p>
-                    ${ship.unlocked ? 
-                        `<button class="menu-btn" onclick="selectShip('${ship.id}')" ${gameData.selectedShip === ship.id ? 'disabled' : ''}>
-                            ${gameData.selectedShip === ship.id ? 'محددة' : 'اختيار'}
-                        </button>` :
-                        `<button class="menu-btn" onclick="buyShip('${ship.id}')" ${gameData.coins >= ship.price ? '' : 'disabled'}>
-                            شراء
-                        </button>`
+                    <h3 style="margin-bottom: 10px;">${ship.name}</h3>
+                    <p style="color: #ccc; margin-bottom: 10px; font-size: 0.9em;">${ship.stats}</p>
+                    ${!isUnlocked ? 
+                        `<p style="color: #ffd54f; margin-bottom: 10px;">السعر: ${ship.price} 💰</p>
+                         <button class="menu-btn" onclick="buyShip('${ship.id}', ${ship.price})" 
+                                 style="padding: 10px 20px; font-size: 0.9em; min-width: auto;"
+                                 ${gameData.coins >= ship.price ? '' : 'disabled'}>
+                             شراء
+                         </button>` : 
+                        `<button class="menu-btn" onclick="selectShip('${ship.id}')" 
+                                 style="padding: 10px 20px; font-size: 0.9em; min-width: auto; background: ${isSelected ? '#10b981' : '#6366f1'};"
+                                 ${isSelected ? 'disabled' : ''}>
+                             ${isSelected ? 'محددة' : 'اختيار'}
+                         </button>`
                     }
                 `;
                 
@@ -278,154 +772,545 @@
             });
         }
 
-        // إنشاء الترقيات
         function generateUpgrades() {
             const upgradesContainer = document.getElementById('upgradesContainer');
             upgradesContainer.innerHTML = '';
             
             const upgrades = [
-                { id: 'weapon', name: 'قوة السلاح', level: gameData.upgrades.weapon, price: 50 },
-                { id: 'shield', name: 'الدرع', level: gameData.upgrades.shield, price: 75 }
+                { id: 'weapon', name: '💥 قوة السلاح', level: gameData.upgrades.weapon, price: 50, desc: 'يزيد قوة الضرر' },
+                { id: 'fireRate', name: '🎯 سرعة الطلقات', level: gameData.upgrades.fireRate, price: 75, desc: 'يزيد سرعة الإطلاق' },
+                { id: 'shield', name: '🛡️ درع الطاقة', level: gameData.upgrades.shield, price: 100, desc: 'يقلل الضرر الواقع' },
+                { id: 'health', name: '❤️ تعزيز الصحة', level: gameData.upgrades.health, price: 150, desc: 'يزيد الصحة القصوى' }
             ];
             
             upgrades.forEach(upgrade => {
                 const upgradeDiv = document.createElement('div');
                 upgradeDiv.style.background = 'rgba(255,255,255,0.1)';
-                upgradeDiv.style.padding = '15px';
-                upgradeDiv.style.margin = '10px';
-                upgradeDiv.style.borderRadius = '10px';
+                upgradeDiv.style.padding = '20px';
+                upgradeDiv.style.borderRadius = '15px';
+                upgradeDiv.style.display = 'flex';
+                upgradeDiv.style.justifyContent = 'space-between';
+                upgradeDiv.style.alignItems = 'center';
+                upgradeDiv.style.flexWrap = 'wrap';
+                upgradeDiv.style.gap = '15px';
                 
-                upgradeDiv.innerHTML = `
-                    <h3>${upgrade.name}</h3>
-                    <p>المستوى: ${upgrade.level}</p>
-                    <p>السعر: ${upgrade.price} 💰</p>
-                    <button class="menu-btn" onclick="buyUpgrade('${upgrade.id}')" ${gameData.coins >= upgrade.price ? '' : 'disabled'}>
-                        ترقية
-                    </button>
+                const upgradeInfo = document.createElement('div');
+                upgradeInfo.style.textAlign = 'right';
+                upgradeInfo.innerHTML = `
+                    <h4 style="margin-bottom: 5px;">${upgrade.name}</h4>
+                    <p style="color: #ccc; font-size: 0.9em; margin-bottom: 5px;">${upgrade.desc}</p>
+                    <p style="color: #ffd54f;">المستوى: ${upgrade.level} | السعر: ${upgrade.price} 💰</p>
                 `;
                 
+                const upgradeBtn = document.createElement('button');
+                upgradeBtn.className = 'menu-btn';
+                upgradeBtn.style.padding = '10px 20px';
+                upgradeBtn.style.minWidth = 'auto';
+                upgradeBtn.textContent = 'ترقية';
+                upgradeBtn.onclick = () => buyUpgrade(upgrade.id, upgrade.price);
+                upgradeBtn.disabled = gameData.coins < upgrade.price;
+                
+                upgradeDiv.appendChild(upgradeInfo);
+                upgradeDiv.appendChild(upgradeBtn);
                 upgradesContainer.appendChild(upgradeDiv);
             });
         }
 
-        // دوال اللعبة
+        // ===== دوال اللعبة =====
         function selectShip(shipId) {
             gameData.selectedShip = shipId;
             generateShips();
-            alert('✓ تم اختيار الطائرة بنجاح!');
+            showFloatingText('✓ تم اختيار الطائرة!', window.innerWidth/2, window.innerHeight/2, '#4caf50');
         }
 
-        function buyShip(shipId) {
-            const ship = { id: 'fighter', price: 500 }; // مبسط للتوضيح
-            if (gameData.coins >= ship.price) {
-                gameData.coins -= ship.price;
-                // في الواقع، يجب فتح السفينة
-                alert('✓ تم شراء الطائرة بنجاح!');
+        function buyShip(shipId, price) {
+            if (gameData.coins >= price) {
+                gameData.coins -= price;
+                gameData.ships[shipId].unlocked = true;
+                gameData.selectedShip = shipId;
+                updateCurrencyDisplay();
                 generateShips();
-                updateScreenContent('shipsScreen');
+                showFloatingText('✓ تم شراء الطائرة!', window.innerWidth/2, window.innerHeight/2, '#4caf50');
             }
         }
 
-        function buyUpgrade(upgradeId) {
-            const upgrade = { price: 50 }; // مبسط للتوضيح
-            if (gameData.coins >= upgrade.price) {
-                gameData.coins -= upgrade.price;
+        function buyUpgrade(upgradeId, price) {
+            if (gameData.coins >= price) {
+                gameData.coins -= price;
                 gameData.upgrades[upgradeId]++;
-                alert('✓ تمت الترقية بنجاح!');
+                updateCurrencyDisplay();
                 generateUpgrades();
-                updateScreenContent('upgradesScreen');
+                showFloatingText('✓ تمت الترقية!', window.innerWidth/2, window.innerHeight/2, '#4caf50');
             }
         }
 
         function startLevel(level) {
             gameData.currentLevel = level;
             showScreen('gameScreen');
-            startGame();
         }
 
+        // ===== محرك اللعبة الرئيسي =====
         function startGame() {
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
+            game.canvas = document.getElementById('gameCanvas');
+            game.ctx = game.canvas.getContext('2d');
             
             // ضبط حجم الكانفاس
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            game.canvas.width = window.innerWidth;
+            game.canvas.height = window.innerHeight;
             
-            // لاعب
-            const player = {
-                x: canvas.width / 2 - 25,
-                y: canvas.height - 100,
-                width: 50,
-                height: 50,
-                color: '#4fc3f7'
-            };
+            // إعادة تعيين اللعبة
+            resetGameState();
             
-            // التحكم
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowLeft') player.x = Math.max(0, player.x - 10);
-                if (e.key === 'ArrowRight') player.x = Math.min(canvas.width - player.width, player.x + 10);
-            });
+            // إعداد اللاعب
+            setupPlayer();
             
-            // اللعبة الأساسية
-            function gameLoop() {
-                // مسح الشاشة
-                ctx.fillStyle = 'rgba(12, 12, 46, 0.1)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // رسم النجوم
-                ctx.fillStyle = '#ffffff';
-                for (let i = 0; i < 50; i++) {
-                    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-                }
-                
-                // رسم اللاعب
-                ctx.fillStyle = player.color;
-                ctx.fillRect(player.x, player.y, player.width, player.height);
-                
-                // استمرار اللعبة
-                requestAnimationFrame(gameLoop);
-            }
+            // إعداد التحكم
+            setupControls();
             
+            // بدء الحلقة الرئيسية
             gameLoop();
             
-            // تحديث واجهة اللعبة
+            // بدء إنشاء الأعداء
+            startEnemySpawning();
+        }
+
+        function resetGameState() {
+            game.enemies = [];
+            game.bullets = [];
+            game.enemyBullets = [];
+            game.particles = [];
+            game.loot = [];
+            game.score = 0;
+            game.isPaused = false;
+            game.lastShot = 0;
+            
             document.getElementById('currentLevel').textContent = gameData.currentLevel;
+            document.getElementById('currentScore').textContent = '0';
+            document.getElementById('gameCoins').textContent = '0';
+            document.getElementById('gameGems').textContent = '0';
+            document.getElementById('healthFill').style.width = '100%';
+        }
+
+        function setupPlayer() {
+            game.player = {
+                x: game.canvas.width / 2 - 25,
+                y: game.canvas.height - 100,
+                width: 50,
+                height: 50,
+                speed: 8,
+                health: 100 + (gameData.upgrades.health * 25),
+                maxHealth: 100 + (gameData.upgrades.health * 25),
+                color: '#6366f1',
+                lastShot: 0,
+                fireRate: 300 - (gameData.upgrades.fireRate * 20),
+                damage: 25 + (gameData.upgrades.weapon * 15)
+            };
+        }
+
+        function setupControls() {
+            // لوحة المفاتيح
+            document.addEventListener('keydown', (e) => {
+                game.keys[e.key] = true;
+                if (e.key === ' ') {
+                    shoot();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                game.keys[e.key] = false;
+            });
+
+            // اللمس للجوال
+            game.canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const rect = game.canvas.getBoundingClientRect();
+                game.player.x = e.touches[0].clientX - rect.left - game.player.width / 2;
+            });
+
+            game.canvas.addEventListener('touchstart', () => {
+                shoot();
+            });
+        }
+
+        function gameLoop() {
+            if (game.isPaused) return;
+
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            updatePlayer();
+            updateBullets();
+            updateEnemies();
+            updateEnemyBullets();
+            updateParticles();
+            updateLoot();
+            checkCollisions();
+        }
+
+        function updatePlayer() {
+            // حركة اللاعب
+            if (game.keys['ArrowLeft'] || game.keys['a']) {
+                game.player.x = Math.max(0, game.player.x - game.player.speed);
+            }
+            if (game.keys['ArrowRight'] || game.keys['d']) {
+                game.player.x = Math.min(game.canvas.width - game.player.width, game.player.x + game.player.speed);
+            }
+            if (game.keys['ArrowUp'] || game.keys['w']) {
+                game.player.y = Math.max(0, game.player.y - game.player.speed);
+            }
+            if (game.keys['ArrowDown'] || game.keys['s']) {
+                game.player.y = Math.min(game.canvas.height - game.player.height, game.player.y + game.player.speed);
+            }
+
+            // إطلاق نار تلقائي عند الضغط على زر التحكم
+            if (game.keys['Control'] && Date.now() - game.player.lastShot > game.player.fireRate) {
+                shoot();
+            }
+        }
+
+        function shoot() {
+            if (Date.now() - game.player.lastShot > game.player.fireRate) {
+                game.bullets.push({
+                    x: game.player.x + game.player.width / 2 - 2.5,
+                    y: game.player.y,
+                    width: 5,
+                    height: 15,
+                    speed: 12,
+                    damage: game.player.damage,
+                    color: '#4fc3f7'
+                });
+
+                game.player.lastShot = Date.now();
+            }
+        }
+
+        function updateBullets() {
+            game.bullets = game.bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                return bullet.y > -bullet.height;
+            });
+        }
+
+        function updateEnemies() {
+            // حركة الأعداء
+            game.enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                
+                // إطلاق النار من الأعداء
+                if (Math.random() < 0.01) { // 1% فرصة كل إطار
+                    game.enemyBullets.push({
+                        x: enemy.x + enemy.width / 2 - 2.5,
+                        y: enemy.y + enemy.height,
+                        width: 5,
+                        height: 15,
+                        speed: 6,
+                        damage: 10,
+                        color: '#ef4444'
+                    });
+                }
+            });
+
+            // إزالة الأعداء الذين خرجوا من الشاشة
+            game.enemies = game.enemies.filter(enemy => enemy.y < game.canvas.height);
+        }
+
+        function updateEnemyBullets() {
+            game.enemyBullets = game.enemyBullets.filter(bullet => {
+                bullet.y += bullet.speed;
+                return bullet.y < game.canvas.height;
+            });
+        }
+
+        function updateParticles() {
+            game.particles = game.particles.filter(particle => {
+                particle.life--;
+                return particle.life > 0;
+            });
+        }
+
+        function updateLoot() {
+            game.loot = game.loot.filter(item => {
+                item.y += 3;
+                return item.y < game.canvas.height;
+            });
+        }
+
+        function startEnemySpawning() {
+            setInterval(() => {
+                if (!game.isPaused) {
+                    spawnEnemy();
+                }
+            }, 1000); // عدو كل ثانية
+        }
+
+        function spawnEnemy() {
+            const level = gameData.currentLevel;
+            const enemyTypes = [
+                { width: 40, height: 40, health: 30, speed: 2, color: '#ef4444', value: 10 },
+                { width: 35, height: 35, health: 20, speed: 3, color: '#f59e0b', value: 15 },
+                { width: 50, height: 50, health: 50, speed: 1, color: '#8b5cf6', value: 25 }
+            ];
+            
+            const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            
+            game.enemies.push({
+                x: Math.random() * (game.canvas.width - type.width),
+                y: -type.height,
+                width: type.width,
+                height: type.height,
+                health: type.health + (level * 5),
+                maxHealth: type.health + (level * 5),
+                speed: type.speed + (level * 0.1),
+                color: type.color,
+                value: type.value + (level * 2)
+            });
+        }
+
+        function checkCollisions() {
+            // تصادم الرصاص مع الأعداء
+            game.bullets.forEach((bullet, bulletIndex) => {
+                game.enemies.forEach((enemy, enemyIndex) => {
+                    if (isColliding(bullet, enemy)) {
+                        enemy.health -= bullet.damage;
+                        game.bullets.splice(bulletIndex, 1);
+                        
+                        createExplosion(bullet.x, bullet.y, bullet.color);
+                        
+                        if (enemy.health <= 0) {
+                            game.score += enemy.value;
+                            gameData.coins += Math.floor(enemy.value / 2);
+                            
+                            createLoot(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+                            
+                            game.enemies.splice(enemyIndex, 1);
+                            updateGameUI();
+                            
+                            showFloatingText(`+${enemy.value} نقاط`, enemy.x, enemy.y, '#ffd54f');
+                        }
+                    }
+                });
+            });
+
+            // تصادم رصاص الأعداء مع اللاعب
+            game.enemyBullets.forEach((bullet, bulletIndex) => {
+                if (isColliding(bullet, game.player)) {
+                    game.player.health -= bullet.damage;
+                    game.enemyBullets.splice(bulletIndex, 1);
+                    createExplosion(bullet.x, bullet.y, bullet.color);
+                    
+                    updateHealthBar();
+                    
+                    if (game.player.health <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+
+            // جمع الغنائم
+            game.loot.forEach((item, itemIndex) => {
+                if (isColliding(item, game.player)) {
+                    if (item.type === 'coin') {
+                        gameData.coins += item.value;
+                        showFloatingText(`+${item.value} 💰`, game.player.x, game.player.y, '#ffd54f');
+                    } else if (item.type === 'gem') {
+                        gameData.gems += item.value;
+                        showFloatingText(`+${item.value} 💎`, game.player.x, game.player.y, '#e91e63');
+                    } else if (item.type === 'health') {
+                        game.player.health = Math.min(game.player.maxHealth, game.player.health + 30);
+                        showFloatingText('+30 ❤️', game.player.x, game.player.y, '#4caf50');
+                        updateHealthBar();
+                    }
+                    
+                    game.loot.splice(itemIndex, 1);
+                    updateGameUI();
+                }
+            });
+        }
+
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 5; i++) {
+                game.particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 20,
+                    maxLife: 20,
+                    color: color,
+                    size: Math.random() * 8 + 4
+                });
+            }
+        }
+
+        function createLoot(x, y) {
+            const lootTypes = [
+                { type: 'coin', chance: 0.7, value: 5 },
+                { type: 'coin', chance: 0.3, value: 10 },
+                { type: 'gem', chance: 0.1, value: 1 },
+                { type: 'health', chance: 0.2, value: 0 }
+            ];
+
+            lootTypes.forEach(loot => {
+                if (Math.random() < loot.chance) {
+                    game.loot.push({
+                        x: x,
+                        y: y,
+                        width: 20,
+                        height: 20,
+                        type: loot.type,
+                        value: loot.value,
+                        color: loot.type === 'coin' ? '#ffd54f' : 
+                               loot.type === 'gem' ? '#e91e63' : '#4caf50'
+                    });
+                }
+            });
+        }
+
+        function render() {
+            // مسح الشاشة
+            game.ctx.fillStyle = 'rgba(15, 15, 35, 0.1)';
+            game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
+
+            // رسم النجوم
+            game.ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 100; i++) {
+                game.ctx.fillRect(
+                    Math.random() * game.canvas.width,
+                    Math.random() * game.canvas.height,
+                    1, 1
+                );
+            }
+
+            // رسم الغنائم
+            game.loot.forEach(item => {
+                game.ctx.fillStyle = item.color;
+                game.ctx.fillRect(item.x, item.y, item.width, item.height);
+            });
+
+            // رسم الجسيمات
+            game.particles.forEach(particle => {
+                const alpha = particle.life / particle.maxLife;
+                game.ctx.save();
+                game.ctx.globalAlpha = alpha;
+                game.ctx.fillStyle = particle.color;
+                game.ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+                game.ctx.restore();
+            });
+
+            // رسم الأعداء
+            game.enemies.forEach(enemy => {
+                game.ctx.fillStyle = enemy.color;
+                game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // شريط الصحة
+                const healthPercent = enemy.health / enemy.maxHealth;
+                game.ctx.fillStyle = '#ef4444';
+                game.ctx.fillRect(enemy.x, enemy.y - 8, enemy.width * healthPercent, 4);
+            });
+
+            // رسم رصاص الأعداء
+            game.enemyBullets.forEach(bullet => {
+                game.ctx.fillStyle = bullet.color;
+                game.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // رسم رصاص اللاعب
+            game.bullets.forEach(bullet => {
+                game.ctx.fillStyle = bullet.color;
+                game.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // رسم اللاعب
+            game.ctx.fillStyle = game.player.color;
+            game.ctx.fillRect(game.player.x, game.player.y, game.player.width, game.player.height);
+            
+            // تأثيرات خاصة للاعب
+            game.ctx.strokeStyle = 'rgba(79, 195, 247, 0.5)';
+            game.ctx.lineWidth = 2;
+            game.ctx.strokeRect(game.player.x - 2, game.player.y - 2, game.player.width + 4, game.player.height + 4);
+        }
+
+        function updateGameUI() {
+            document.getElementById('currentScore').textContent = game.score;
+            document.getElementById('gameCoins').textContent = gameData.coins;
+            document.getElementById('gameGems').textContent = gameData.gems;
+        }
+
+        function updateHealthBar() {
+            const healthPercent = (game.player.health / game.player.maxHealth) * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+        }
+
+        function gameOver() {
+            game.isPaused = true;
+            alert(`💀 انتهت اللعبة!\n\nالنقاط: ${game.score}\nالعملات: ${gameData.coins}\n\nاضغط موافق للعودة`);
+            showScreen('startScreen');
+        }
+
+        function pauseGame() {
+            game.isPaused = !game.isPaused;
+            if (!game.isPaused) {
+                gameLoop();
+            }
+        }
+
+        function showFloatingText(text, x, y, color) {
+            const floatingText = document.createElement('div');
+            floatingText.className = 'floating-text';
+            floatingText.textContent = text;
+            floatingText.style.left = x + 'px';
+            floatingText.style.top = y + 'px';
+            floatingText.style.color = color;
+            
+            document.getElementById('gameScreen').appendChild(floatingText);
+            
+            setTimeout(() => {
+                floatingText.remove();
+            }, 1500);
+        }
+
+        function toggleSound() {
+            alert('🔊 سيتم تفعيل الصوت في الإصدارات القادمة!');
+        }
+
+        function resetGame() {
+            if (confirm('هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم فقدان كل التقدم.')) {
+                gameData = {
+                    coins: 1000,
+                    gems: 50,
+                    currentLevel: 1,
+                    unlockedLevels: 5,
+                    selectedShip: 'basic',
+                    upgrades: { weapon: 1, fireRate: 1, shield: 1, health: 1 },
+                    ships: { basic: { unlocked: true }, fighter: { unlocked: false }, tank: { unlocked: false }, sniper: { unlocked: false } }
+                };
+                updateCurrencyDisplay();
+                showScreen('startScreen');
+            }
         }
 
         // ===== بدء اللعبة =====
         window.addEventListener('load', function() {
             console.log('✅ تم تحميل الصفحة بالكامل');
             
-            // إخفاء شاشة التحميل بعد ثانيتين (ضماناً)
             setTimeout(() => {
                 const loadingScreen = document.getElementById('loadingScreen');
                 if (loadingScreen) {
                     loadingScreen.style.display = 'none';
                 }
-                
-                // إظهار شاشة البداية
                 showScreen('startScreen');
-                
                 console.log('🎮 اللعبة جاهزة!');
-            }, 1000);
-        });
-
-        // حل احتياطي: إخفاء شاشة التحميل إذا حدث أي خطأ
-        window.addEventListener('error', function() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-            showScreen('startScreen');
-        });
-
-        // إخفاء شاشة التحميل عند الضغط على أي مفتاح (للتطوير)
-        document.addEventListener('keydown', function() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen && loadingScreen.style.display !== 'none') {
-                loadingScreen.style.display = 'none';
-                showScreen('startScreen');
-            }
+            }, 2000);
         });
     </script>
 </body>
