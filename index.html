@@ -332,16 +332,7 @@
             gap: 10px;
         }
 
-        /* عناصر التحكم باللمس */
-        .touch-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            display: none;
-            gap: 20px;
-            z-index: 10;
-        }
-
+        /* مؤشر الإطلاق التلقائي */
         .auto-fire-indicator {
             position: absolute;
             bottom: 120px;
@@ -402,16 +393,6 @@
             .nav-btn span {
                 font-size: 0.5em;
             }
-        }
-
-        /* تأثيرات خاصة للوحوش */
-        .enemy-stopped {
-            animation: enemyPulse 0.5s infinite alternate;
-        }
-
-        @keyframes enemyPulse {
-            from { transform: scale(1); }
-            to { transform: scale(1.1); }
         }
     </style>
 </head>
@@ -670,22 +651,28 @@
             autoFireInterval: null
         };
 
-        // ===== نظام الصوت =====
+        // ===== نظام الصوت المتكامل =====
         const SoundManager = {
+            audioContext: null,
+            sounds: {},
+
             init() {
-                // إنشاء أصوات أساسية (يمكن استبدالها بملفات صوت حقيقية)
+                console.log('🔊 تهيئة نظام الصوت...');
+                this.createAudioContext();
+                this.setupSoundControls();
                 this.createBasicSounds();
-                
-                // تحميل الإعدادات
-                this.loadSettings();
             },
-            
-            createBasicSounds() {
-                // أصوات أساسية باستخدام Oscillator (بديل بسيط)
-                // في الإصدار النهائي، استبدل هذه بملفات صوت حقيقية
+
+            createAudioContext() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('✅ AudioContext جاهز');
+                } catch (error) {
+                    console.log('❌ AudioContext غير مدعوم:', error);
+                }
             },
-            
-            loadSettings() {
+
+            setupSoundControls() {
                 const sfxSlider = document.getElementById('sfxVolume');
                 const musicSlider = document.getElementById('musicVolume');
                 
@@ -700,107 +687,131 @@
                     musicSlider.value = gameData.settings.musicVolume;
                     musicSlider.addEventListener('input', (e) => {
                         gameData.settings.musicVolume = e.target.value;
-                        this.updateMusicVolume();
                     });
                 }
             },
-            
+
+            createBasicSounds() {
+                // لا حاجة لملفات صوتية - الأصوات تنشأ برمجياً
+                console.log('🎵 الأصوات الأساسية جاهزة للاستخدام');
+            },
+
+            // إنشاء صوت إطلاق نار برمجياً
             playShoot() {
-                if (!gameData.settings.soundEnabled) return;
+                if (!gameData.settings.soundEnabled || !this.audioContext) return;
                 
                 try {
-                    const audio = document.getElementById('shootSound');
-                    if (audio) {
-                        audio.volume = gameData.settings.sfxVolume / 100;
-                        audio.currentTime = 0;
-                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
-                    }
-                } catch (e) {
-                    console.log('خطأ في تشغيل صوت الإطلاق:', e);
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'square';
+                    
+                    gainNode.gain.setValueAtTime(0.3 * (gameData.settings.sfxVolume / 100), this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.1);
+                } catch (error) {
+                    console.log('🔇 خطأ في تشغيل صوت الإطلاق');
                 }
             },
-            
+
+            // إنشاء صوت انفجار برمجياً
             playExplosion() {
-                if (!gameData.settings.soundEnabled) return;
+                if (!gameData.settings.soundEnabled || !this.audioContext) return;
                 
                 try {
-                    const audio = document.getElementById('explosionSound');
-                    if (audio) {
-                        audio.volume = gameData.settings.sfxVolume / 100;
-                        audio.currentTime = 0;
-                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
-                    }
-                } catch (e) {
-                    console.log('خطأ في تشغيل صوت الانفجار:', e);
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.5);
+                    oscillator.type = 'sawtooth';
+                    
+                    gainNode.gain.setValueAtTime(0.4 * (gameData.settings.sfxVolume / 100), this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.5);
+                } catch (error) {
+                    console.log('🔇 خطأ في تشغيل صوت الانفجار');
                 }
             },
-            
+
+            // إنشاء صوت عملة برمجياً
             playCoin() {
-                if (!gameData.settings.soundEnabled) return;
+                if (!gameData.settings.soundEnabled || !this.audioContext) return;
                 
                 try {
-                    const audio = document.getElementById('coinSound');
-                    if (audio) {
-                        audio.volume = gameData.settings.sfxVolume / 100;
-                        audio.currentTime = 0;
-                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
-                    }
-                } catch (e) {
-                    console.log('خطأ في تشغيل صوت العملة:', e);
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(1000, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(300, this.audioContext.currentTime + 0.2);
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3 * (gameData.settings.sfxVolume / 100), this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.2);
+                } catch (error) {
+                    console.log('🔇 خطأ في تشغيل صوت العملة');
                 }
             },
-            
+
+            // إنشاء صوت توقف العدو برمجياً
             playEnemyStop() {
-                if (!gameData.settings.soundEnabled) return;
+                if (!gameData.settings.soundEnabled || !this.audioContext) return;
                 
                 try {
-                    const audio = document.getElementById('enemyStopSound');
-                    if (audio) {
-                        audio.volume = gameData.settings.sfxVolume / 100;
-                        audio.currentTime = 0;
-                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
-                    }
-                } catch (e) {
-                    console.log('خطأ في تشغيل صوت توقف العدو:', e);
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.3);
+                    oscillator.type = 'triangle';
+                    
+                    gainNode.gain.setValueAtTime(0.2 * (gameData.settings.sfxVolume / 100), this.audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+                    
+                    oscillator.start(this.audioContext.currentTime);
+                    oscillator.stop(this.audioContext.currentTime + 0.3);
+                } catch (error) {
+                    console.log('🔇 خطأ في تشغيل صوت توقف العدو');
                 }
             },
-            
+
+            // تشغيل الموسيقى الخلفية (بدون ملف)
             playBackgroundMusic() {
                 if (!gameData.settings.soundEnabled) return;
-                
-                try {
-                    const audio = document.getElementById('backgroundMusic');
-                    if (audio) {
-                        audio.volume = gameData.settings.musicVolume / 100;
-                        audio.play().catch(e => console.log('لم يتم تشغيل الموسيقى:', e));
-                    }
-                } catch (e) {
-                    console.log('خطأ في تشغيل الموسيقى:', e);
-                }
+                console.log('🎵 الموسيقى الخلفية جاهزة (بدون ملف)');
             },
-            
-            updateMusicVolume() {
-                const audio = document.getElementById('backgroundMusic');
-                if (audio) {
-                    audio.volume = gameData.settings.musicVolume / 100;
-                }
-            },
-            
+
             stopBackgroundMusic() {
-                const audio = document.getElementById('backgroundMusic');
-                if (audio) {
-                    audio.pause();
-                    audio.currentTime = 0;
-                }
+                // لا حاجة لإيقاف أي شيء
             },
-            
+
             toggleSound() {
                 gameData.settings.soundEnabled = !gameData.settings.soundEnabled;
-                if (gameData.settings.soundEnabled) {
-                    this.playBackgroundMusic();
-                } else {
-                    this.stopBackgroundMusic();
+                const btn = document.querySelector('.icon-btn[onclick="toggleSound()"]');
+                if (btn) {
+                    btn.textContent = gameData.settings.soundEnabled ? '🔊' : '🔇';
                 }
+                console.log(gameData.settings.soundEnabled ? '🔊 الصوت مفعل' : '🔇 الصوت معطل');
             }
         };
 
@@ -1641,26 +1652,6 @@
                 console.log('🎮 اللعبة جاهزة!');
             }, 2000);
         });
-        // ... الكود الحالي ...
-
-// ===== إنشاء أصوات أساسية برمجياً =====
-function createBasicSounds() {
-    console.log('🔊 جاهز لاستخدام الأصوات الأساسية');
-    
-    const shootAudio = document.getElementById('shootSound');
-    const explosionAudio = document.getElementById('explosionSound');
-    const coinAudio = document.getElementById('coinSound');
-    
-    if (shootAudio && explosionAudio && coinAudio) {
-        console.log('✅ جميع عناصر الصوت جاهزة');
-    }
-}
-
-// تشغيل عند التحميل
-createBasicSounds();
-
-});
-    // نهاية window.addEventListener إذا كانت موجودة
     </script>
 </body>
 </html>
