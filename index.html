@@ -3,235 +3,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galaxy Attack - لعبة الهجوم الفضائي</title>
+    <title>Galaxy Attack - Space Shooter</title>
+    <meta name="description" content="لعبة space shooter متقدمة مع 100 مستوى ونظام ترقيات متكامل">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
-    <div id="gameContainer">
-        <!-- شاشة البداية -->
-        <div id="startScreen" class="screen active">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loading-content">
+            <div class="loader"></div>
+            <h2>🚀 جاري تحميل Galaxy Attack...</h2>
+            <p>إعداد الفضاء للقتال</p>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <div id="gameContainer" style="display: none;">
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen">
             <div class="screen-content">
-                <div class="header">
-                    <h1>🚀 Galaxy Attack</h1>
-                    <div class="player-info">
-                        <div class="coins">💰 <span id="totalCoins">0</span></div>
-                        <div class="gems">💎 <span id="totalGems">0</span></div>
+                <div class="game-header">
+                    <h1 class="game-title">🌌 Galaxy Attack</h1>
+                    <div class="player-stats">
+                        <div class="stat-item">
+                            <span class="stat-icon">💰</span>
+                            <span id="totalCoins" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">💎</span>
+                            <span id="totalGems" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-icon">⭐</span>
+                            <span id="playerLevel" class="stat-value">1</span>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="main-buttons">
-                    <button id="startBtn" class="menu-btn primary">🎮 بدء اللعبة</button>
-                    <button id="shipsBtn" class="menu-btn secondary">🚀 الأسطول</button>
-                    <button id="upgradesBtn" class="menu-btn secondary">⭐ الترقيات</button>
-                    <button id="rewardsBtn" class="menu-btn secondary">🎁 المكافآت</button>
+
+                <div class="main-menu">
+                    <button id="startBtn" class="menu-btn primary animated-pulse">
+                        <span class="btn-icon">🎮</span>
+                        <span class="btn-text">بدء المغامرة</span>
+                    </button>
+                    
+                    <button id="shipsBtn" class="menu-btn secondary">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text">الأسطول الفضائي</span>
+                    </button>
+                    
+                    <button id="upgradesBtn" class="menu-btn secondary">
+                        <span class="btn-icon">⚡</span>
+                        <span class="btn-text">مركز الترقيات</span>
+                    </button>
+                    
+                    <button id="missionsBtn" class="menu-btn secondary">
+                        <span class="btn-icon">🎯</span>
+                        <span class="btn-text">المهام اليومية</span>
+                    </button>
+                    
+                    <button id="rewardsBtn" class="menu-btn accent">
+                        <span class="btn-icon">🎁</span>
+                        <span class="btn-text">المكافآت</span>
+                    </button>
                 </div>
 
-                <div class="quick-icons">
-                    <button class="icon-btn" data-screen="ships">🚀</button>
-                    <button class="icon-btn" data-screen="upgrades">⭐</button>
-                    <button class="icon-btn" data-screen="rewards">🎁</button>
-                    <button class="icon-btn" data-screen="settings">⚙️</button>
+                <div class="quick-access">
+                    <div class="quick-icons">
+                        <button class="quick-btn" data-screen="ships" title="الأسطول">
+                            <span class="quick-icon">🚀</span>
+                        </button>
+                        <button class="quick-btn" data-screen="upgrades" title="الترقيات">
+                            <span class="quick-icon">⚡</span>
+                        </button>
+                        <button class="quick-btn" data-screen="missions" title="المهام">
+                            <span class="quick-icon">🎯</span>
+                        </button>
+                        <button class="quick-btn" data-screen="rewards" title="المكافآت">
+                            <span class="quick-icon">🎁</span>
+                        </button>
+                        <button class="quick-btn" data-screen="leaderboard" title="المتصدرين">
+                            <span class="quick-icon">🏆</span>
+                        </button>
+                        <button class="quick-btn" data-screen="settings" title="الإعدادات">
+                            <span class="quick-icon">⚙️</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="daily-bonus">
+                    <div class="bonus-info">
+                        <span class="bonus-icon">🎁</span>
+                        <span class="bonus-text">المكافأة اليومية جاهزة!</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- شاشة اختيار المستوى -->
+        <!-- Level Selection Screen -->
         <div id="levelSelectScreen" class="screen">
             <div class="screen-content">
-                <div class="header">
-                    <h2>🎯 اختر المستوى</h2>
-                    <button id="backToMainFromLevels" class="back-btn">← رجوع</button>
+                <div class="screen-header">
+                    <h2>🌠 اختيار المستوى</h2>
+                    <button id="backToMainFromLevels" class="back-btn">
+                        <span>← العودة</span>
+                    </button>
                 </div>
+                
+                <div class="level-progress">
+                    <div class="progress-info">
+                        <span>التقدم: </span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="levelProgress" class="progress-fill"></div>
+                    </div>
+                </div>
+
                 <div id="levelGrid" class="level-grid"></div>
+                
+                <div class="level-stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedLevels">0</div>
+                        <div class="stat-label">المستويات المكتملة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalStars">0</div>
+                        <div class="stat-label">النجوم المجمعة</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalScore">0</div>
+                        <div class="stat-label">إجمالي النقاط</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- شاشة الأسطول -->
+        <!-- Ships Screen -->
         <div id="shipsScreen" class="screen">
             <div class="screen-content">
-                <div class="header">
-                    <h2>🚀 الأسطول</h2>
-                    <button id="backToMainFromShips" class="back-btn">← رجوع</button>
+                <div class="screen-header">
+                    <h2>🛸 الأسطول الفضائي</h2>
+                    <button id="backToMainFromShips" class="back-btn">
+                        <span>← العودة</span>
+                    </button>
                 </div>
+
                 <div class="currency-display">
-                    <div class="coins">💰 <span id="shipsCoins">0</span></div>
-                    <div class="gems">💎 <span id="shipsGems">0</span></div>
+                    <div class="currency-item">
+                        <span class="currency-icon">💰</span>
+                        <span id="shipsCoins" class="currency-value">0</span>
+                    </div>
+                    <div class="currency-item">
+                        <span class="currency-icon">💎</span>
+                        <span id="shipsGems" class="currency-value">0</span>
+                    </div>
                 </div>
+
+                <div class="selected-ship-preview">
+                    <div id="selectedShipDisplay" class="ship-preview">
+                        <div class="ship-image">🚀</div>
+                        <div class="ship-info">
+                            <h3 id="selectedShipName">الطائرة الأساسية</h3>
+                            <div class="ship-stats">
+                                <div class="stat">❤️ <span id="selectedHealth">100</span></div>
+                                <div class="stat">⚡ <span id="selectedDamage">25</span></div>
+                                <div class="stat">🎯 <span id="selectedFireRate">300</span></div>
+                                <div class="stat">🛡️ <span id="selectedShield">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="shipsContainer" class="ships-container"></div>
             </div>
         </div>
 
-        <!-- شاشة الترقيات -->
+        <!-- Upgrades Screen -->
         <div id="upgradesScreen" class="screen">
             <div class="screen-content">
-                <div class="header">
-                    <h2>⭐ مركز الترقيات</h2>
-                    <button id="backToMainFromUpgrades" class="back-btn">← رجوع</button>
+                <div class="screen-header">
+                    <h2>⚡ مركز الترقيات</h2>
+                    <button id="backToMainFromUpgrades" class="back-btn">
+                        <span>← العودة</span>
+                    </button>
                 </div>
-                <div class="currency-display">
-                    <div class="coins">💰 <span id="upgradesCoins">0</span></div>
-                    <div class="gems">💎 <span id="upgradesGems">0</span></div>
+
+                <div class="upgrades-stats">
+                    <div class="upgrade-stat">
+                        <span class="stat-name">قوة الهجوم</span>
+                        <div class="stat-level">
+                            <div class="level-bars">
+                                <div class="level-bar active"></div>
+                                <div class="level-bar"></div>
+                                <div class="level-bar"></div>
+                                <div class="level-bar"></div>
+                                <div class="level-bar"></div>
+                            </div>
+                            <span class="level-text">المستوى <span id="weaponLevel">1</span></span>
+                        </div>
+                    </div>
+                    <!-- Add more upgrade stats -->
                 </div>
+
                 <div class="upgrades-container">
                     <div class="upgrade-category">
-                        <h3>🛡️ الدفاع</h3>
-                        <div class="upgrade-item">
-                            <h4>الدرع</h4>
-                            <p>المستوى: <span id="shieldLevel">1</span></p>
-                            <p>التكلفة: <span class="cost">💰 50</span></p>
-                            <button class="upgrade-btn" data-upgrade="shield">ترقية</button>
-                        </div>
-                        <div class="upgrade-item">
-                            <h4>الصحة</h4>
-                            <p>المستوى: <span id="healthLevel">1</span></p>
-                            <p>التكلفة: <span class="cost">💰 75</span></p>
-                            <button class="upgrade-btn" data-upgrade="health">ترقية</button>
-                        </div>
-                    </div>
-                    
-                    <div class="upgrade-category">
-                        <h3>🔫 الهجوم</h3>
-                        <div class="upgrade-item">
-                            <h4>قوة السلاح</h4>
-                            <p>المستوى: <span id="weaponLevel">1</span></p>
-                            <p>التكلفة: <span class="cost">💰 100</span></p>
-                            <button class="upgrade-btn" data-upgrade="weapon">ترقية</button>
-                        </div>
-                        <div class="upgrade-item">
-                            <h4>سرعة الطلقات</h4>
-                            <p>المستوى: <span id="fireRateLevel">1</span></p>
-                            <p>التكلفة: <span class="cost">💰 120</span></p>
-                            <button class="upgrade-btn" data-upgrade="fireRate">ترقية</button>
+                        <h3>🛡️ أنظمة الدفاع</h3>
+                        <div class="upgrade-list">
+                            <div class="upgrade-item" data-upgrade="shield">
+                                <div class="upgrade-icon">🛡️</div>
+                                <div class="upgrade-info">
+                                    <h4>درع الطاقة</h4>
+                                    <p>يزيد من مقاومة الطائرة للضرر</p>
+                                    <div class="upgrade-cost">
+                                        <span class="cost-icon">💰</span>
+                                        <span class="cost-value">50</span>
+                                    </div>
+                                </div>
+                                <button class="upgrade-btn">ترقية</button>
+                            </div>
+                            <!-- Add more upgrade items -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- شاشة المكافآت -->
-        <div id="rewardsScreen" class="screen">
-            <div class="screen-content">
-                <div class="header">
-                    <h2>🎁 المكافآت والعمولات</h2>
-                    <button id="backToMainFromRewards" class="back-btn">← رجوع</button>
-                </div>
-                <div class="rewards-container">
-                    <div class="daily-reward">
-                        <h3>🎯 المكافأة اليومية</h3>
-                        <div id="dailyRewardStatus" class="reward-status">جاهزة للجمع!</div>
-                        <button id="claimDailyReward" class="reward-btn">🎁 جمع المكافأة</button>
-                    </div>
-                    
-                    <div class="achievements">
-                        <h3>🏆 الإنجازات</h3>
-                        <div id="achievementsList" class="achievements-list"></div>
-                    </div>
-                    
-                    <div class="commission-system">
-                        <h3>💼 نظام العمولات</h3>
-                        <div class="commission-info">
-                            <p>عمولات الترقيات: <span id="upgradeCommission">0</span> 💰</p>
-                            <p>عمولات الشراء: <span id="purchaseCommission">0</span> 💎</p>
-                            <button id="claimCommissions" class="commission-btn">💰 جمع العمولات</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- شاشة الإعدادات -->
-        <div id="settingsScreen" class="screen">
-            <div class="screen-content">
-                <div class="header">
-                    <h2>⚙️ الإعدادات</h2>
-                    <button id="backToMainFromSettings" class="back-btn">← رجوع</button>
-                </div>
-                <div class="settings-container">
-                    <div class="setting-item">
-                        <label>🔊 صوت المؤثرات</label>
-                        <input type="range" id="sfxVolume" min="0" max="100" value="80">
-                    </div>
-                    <div class="setting-item">
-                        <label>🎵 صوت الموسيقى</label>
-                        <input type="range" id="musicVolume" min="0" max="100" value="60">
-                    </div>
-                    <div class="setting-item">
-                        <label>🌙 الوضع الليلي</label>
-                        <input type="checkbox" id="darkMode">
-                    </div>
-                    <button id="resetGame" class="danger-btn">🔄 إعادة تعيين اللعبة</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- شاشة اللعبة -->
+        <!-- Game Screen -->
         <div id="gameScreen" class="screen">
             <canvas id="gameCanvas"></canvas>
+            
             <div class="game-ui">
-                <div class="game-stats">
-                    <div>المستوى: <span id="currentLevel">1</span></div>
-                    <div>النقاط: <span id="currentScore">0</span></div>
-                    <div>💰 <span id="gameCoins">0</span></div>
-                    <div>💎 <span id="gameGems">0</span></div>
+                <div class="game-header-ui">
+                    <div class="game-stats">
+                        <div class="game-stat">
+                            <span class="stat-label">المستوى</span>
+                            <span id="currentLevel" class="stat-value">1</span>
+                        </div>
+                        <div class="game-stat">
+                            <span class="stat-label">النقاط</span>
+                            <span id="currentScore" class="stat-value">0</span>
+                        </div>
+                        <div class="game-stat">
+                            <span class="stat-icon">💰</span>
+                            <span id="gameCoins" class="stat-value">0</span>
+                        </div>
+                        <div class="game-stat">
+                            <span class="stat-icon">💎</span>
+                            <span id="gameGems" class="stat-value">0</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="health-bar">
-                    <div class="health-fill" id="healthFill"></div>
+
+                <div class="player-health">
+                    <div class="health-bar">
+                        <div class="health-fill" id="healthFill"></div>
+                        <div class="health-text" id="healthText">100%</div>
+                    </div>
                 </div>
+
                 <div class="game-controls">
-                    <button id="pauseBtn">⏸️</button>
-                    <button id="quitBtn">🏠</button>
+                    <button id="pauseBtn" class="control-btn" title="إيقاف">
+                        ⏸️
+                    </button>
+                    <button id="quitBtn" class="control-btn" title="خروج">
+                        🏠
+                    </button>
+                </div>
+
+                <div class="mobile-controls">
+                    <div class="joystick-area" id="joystickArea">
+                        <div class="joystick" id="joystick"></div>
+                    </div>
+                    <button class="shoot-btn" id="mobileShoot">🔥</button>
                 </div>
             </div>
         </div>
 
-        <!-- شاشة الإنتصار -->
+        <!-- Victory Screen -->
         <div id="victoryScreen" class="screen">
             <div class="screen-content victory-content">
-                <h2>🎉 فوز رائع!</h2>
+                <div class="victory-animation">
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                    <div class="confetti"></div>
+                </div>
+                
+                <h2 class="victory-title">🎉 انتصار رائع!</h2>
+                
                 <div class="victory-stats">
-                    <p>المستوى: <span id="victoryLevel">1</span></p>
-                    <p>النقاط: <span id="victoryScore">0</span></p>
-                    <p class="loot">💰 +<span id="coinsEarned">0</span> عملات</p>
-                    <p class="loot">💎 +<span id="gemsEarned">0</span> أحجار كريمة</p>
+                    <div class="victory-stat">
+                        <span class="stat-label">المستوى</span>
+                        <span id="victoryLevel" class="stat-value">1</span>
+                    </div>
+                    <div class="victory-stat">
+                        <span class="stat-label">النقاط</span>
+                        <span id="victoryScore" class="stat-value">0</span>
+                    </div>
+                    <div class="victory-stat highlight">
+                        <span class="stat-label">المكاسب</span>
+                        <span class="stat-value">
+                            +<span id="coinsEarned">0</span> 💰 
+                            +<span id="gemsEarned">0</span> 💎
+                        </span>
+                    </div>
                 </div>
-                <div class="victory-buttons">
-                    <button id="nextLevelBtn" class="menu-btn primary">المستوى التالي →</button>
-                    <button id="victoryMenuBtn" class="menu-btn secondary">القائمة الرئيسية</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- شاشة الهزيمة -->
-        <div id="gameOverScreen" class="screen">
-            <div class="screen-content gameover-content">
-                <h2>💀 انتهت اللعبة</h2>
-                <div class="gameover-stats">
-                    <p>المستوى: <span id="gameOverLevel">1</span></p>
-                    <p>النقاط: <span id="gameOverScore">0</span></p>
+                <div class="star-rating">
+                    <div class="star" data-star="1">⭐</div>
+                    <div class="star" data-star="2">⭐</div>
+                    <div class="star" data-star="3">⭐</div>
                 </div>
-                <div class="gameover-buttons">
-                    <button id="retryBtn" class="menu-btn primary">🔄 إعادة المحاولة</button>
-                    <button id="gameOverMenuBtn" class="menu-btn secondary">القائمة الرئيسية</button>
+
+                <div class="victory-buttons">
+                    <button id="nextLevelBtn" class="menu-btn primary">
+                        <span>المستوى التالي →</span>
+                    </button>
+                    <button id="victoryMenuBtn" class="menu-btn secondary">
+                        <span>القائمة الرئيسية</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- المؤثرات الصوتية -->
-    <audio id="backgroundMusic" loop></audio>
-    <audio id="shootSound"></audio>
-    <audio id="explosionSound"></audio>
-    <audio id="coinSound"></audio>
-    <audio id="upgradeSound"></audio>
-    <audio id="buttonSound"></audio>
-    <audio id="victorySound"></audio>
-    <audio id="gameOverSound"></audio>
+    <!-- Audio Elements -->
+    <audio id="backgroundMusic" loop preload="auto"></audio>
+    <audio id="shootSound" preload="auto"></audio>
+    <audio id="explosionSound" preload="auto"></audio>
+    <audio id="coinSound" preload="auto"></audio>
+    <audio id="upgradeSound" preload="auto"></audio>
+    <audio id="buttonSound" preload="auto"></audio>
+    <audio id="victorySound" preload="auto"></audio>
+    <audio id="gameOverSound" preload="auto"></audio>
 
-    <script src="js/settings.js"></script>
+    <!-- JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/storage.js"></script>
     <script src="js/ships.js"></script>
-    <script src="js/menu.js"></script>
+    <script src="js/upgrades.js"></script>
+    <script src="js/levels.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/menu.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
