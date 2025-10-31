@@ -17,6 +17,7 @@
             --secondary-color: #8b5cf6;
             --accent-color: #06d6a0;
             --danger-color: #ef4444;
+            --warning-color: #f59e0b;
             --background: #0f0f23;
             --text-primary: #ffffff;
         }
@@ -336,50 +337,23 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            display: flex;
+            display: none;
             gap: 20px;
             z-index: 10;
         }
 
-        .joystick-container {
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        .joystick {
-            width: 60px;
-            height: 60px;
-            background: var(--primary-color);
-            border-radius: 50%;
+        .auto-fire-indicator {
             position: absolute;
-            transition: transform 0.1s ease;
-        }
-
-        .shoot-btn {
-            width: 80px;
-            height: 80px;
-            background: var(--danger-color);
-            border: none;
-            border-radius: 50%;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.8);
             color: white;
-            font-size: 1.5em;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-            transition: all 0.1s ease;
-        }
-
-        .shoot-btn:active {
-            transform: scale(0.9);
-            background: #dc2626;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            display: none;
         }
 
         /* تأثيرات النص العائم */
@@ -428,21 +402,16 @@
             .nav-btn span {
                 font-size: 0.5em;
             }
+        }
 
-            .joystick-container {
-                width: 100px;
-                height: 100px;
-            }
+        /* تأثيرات خاصة للوحوش */
+        .enemy-stopped {
+            animation: enemyPulse 0.5s infinite alternate;
+        }
 
-            .joystick {
-                width: 50px;
-                height: 50px;
-            }
-
-            .shoot-btn {
-                width: 70px;
-                height: 70px;
-            }
+        @keyframes enemyPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
         }
     </style>
 </head>
@@ -457,7 +426,7 @@
     </div>
 
     <!-- الشاشة الرئيسية -->
-    <div id="startScreen" class="screen active">
+    <div id="startScreen" class="screen">
         <div class="game-header">
             <div class="player-stats">
                 <div class="stat-item">
@@ -618,12 +587,9 @@
                 <button class="icon-btn" onclick="showScreen('startScreen')">🏠</button>
             </div>
 
-            <!-- عناصر التحكم باللمس -->
-            <div class="touch-controls">
-                <div class="joystick-container" id="joystickContainer">
-                    <div class="joystick" id="joystick"></div>
-                </div>
-                <button class="shoot-btn" id="shootButton">🔥</button>
+            <!-- مؤشر الإطلاق التلقائي -->
+            <div class="auto-fire-indicator" id="autoFireIndicator">
+                🔥 الإطلاق التلقائي مفعل
             </div>
         </div>
     </div>
@@ -638,16 +604,24 @@
             <div style="text-align: right; margin: 20px 0;">
                 <div style="margin: 15px 0;">
                     <label>🔊 صوت المؤثرات</label>
-                    <input type="range" min="0" max="100" value="80" style="width: 200px;">
+                    <input type="range" min="0" max="100" value="80" id="sfxVolume" style="width: 200px;">
                 </div>
                 <div style="margin: 15px 0;">
                     <label>🎵 صوت الموسيقى</label>
-                    <input type="range" min="0" max="100" value="60" style="width: 200px;">
+                    <input type="range" min="0" max="100" value="60" id="musicVolume" style="width: 200px;">
                 </div>
             </div>
             <button class="menu-btn" onclick="resetGame()">🔄 إعادة تعيين اللعبة</button>
         </div>
     </div>
+
+    <!-- عناصر الصوت -->
+    <audio id="shootSound" preload="auto"></audio>
+    <audio id="explosionSound" preload="auto"></audio>
+    <audio id="coinSound" preload="auto"></audio>
+    <audio id="upgradeSound" preload="auto"></audio>
+    <audio id="enemyStopSound" preload="auto"></audio>
+    <audio id="backgroundMusic" loop preload="auto"></audio>
 
     <script>
         // ===== بيانات اللعبة =====
@@ -668,6 +642,11 @@
                 fighter: { unlocked: false, level: 1 },
                 tank: { unlocked: false, level: 1 },
                 sniper: { unlocked: false, level: 1 }
+            },
+            settings: {
+                sfxVolume: 80,
+                musicVolume: 60,
+                soundEnabled: true
             }
         };
 
@@ -681,16 +660,147 @@
             enemyBullets: [],
             particles: [],
             loot: [],
-            keys: {},
             score: 0,
             isPaused: false,
             lastShot: 0,
-            joystick: {
-                active: false,
-                x: 0,
-                y: 0,
-                startX: 0,
-                startY: 0
+            isTouching: false,
+            touchX: 0,
+            touchY: 0,
+            enemySpawnInterval: null,
+            autoFireInterval: null
+        };
+
+        // ===== نظام الصوت =====
+        const SoundManager = {
+            init() {
+                // إنشاء أصوات أساسية (يمكن استبدالها بملفات صوت حقيقية)
+                this.createBasicSounds();
+                
+                // تحميل الإعدادات
+                this.loadSettings();
+            },
+            
+            createBasicSounds() {
+                // أصوات أساسية باستخدام Oscillator (بديل بسيط)
+                // في الإصدار النهائي، استبدل هذه بملفات صوت حقيقية
+            },
+            
+            loadSettings() {
+                const sfxSlider = document.getElementById('sfxVolume');
+                const musicSlider = document.getElementById('musicVolume');
+                
+                if (sfxSlider) {
+                    sfxSlider.value = gameData.settings.sfxVolume;
+                    sfxSlider.addEventListener('input', (e) => {
+                        gameData.settings.sfxVolume = e.target.value;
+                    });
+                }
+                
+                if (musicSlider) {
+                    musicSlider.value = gameData.settings.musicVolume;
+                    musicSlider.addEventListener('input', (e) => {
+                        gameData.settings.musicVolume = e.target.value;
+                        this.updateMusicVolume();
+                    });
+                }
+            },
+            
+            playShoot() {
+                if (!gameData.settings.soundEnabled) return;
+                
+                try {
+                    const audio = document.getElementById('shootSound');
+                    if (audio) {
+                        audio.volume = gameData.settings.sfxVolume / 100;
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
+                    }
+                } catch (e) {
+                    console.log('خطأ في تشغيل صوت الإطلاق:', e);
+                }
+            },
+            
+            playExplosion() {
+                if (!gameData.settings.soundEnabled) return;
+                
+                try {
+                    const audio = document.getElementById('explosionSound');
+                    if (audio) {
+                        audio.volume = gameData.settings.sfxVolume / 100;
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
+                    }
+                } catch (e) {
+                    console.log('خطأ في تشغيل صوت الانفجار:', e);
+                }
+            },
+            
+            playCoin() {
+                if (!gameData.settings.soundEnabled) return;
+                
+                try {
+                    const audio = document.getElementById('coinSound');
+                    if (audio) {
+                        audio.volume = gameData.settings.sfxVolume / 100;
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
+                    }
+                } catch (e) {
+                    console.log('خطأ في تشغيل صوت العملة:', e);
+                }
+            },
+            
+            playEnemyStop() {
+                if (!gameData.settings.soundEnabled) return;
+                
+                try {
+                    const audio = document.getElementById('enemyStopSound');
+                    if (audio) {
+                        audio.volume = gameData.settings.sfxVolume / 100;
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log('لم يتم تشغيل الصوت:', e));
+                    }
+                } catch (e) {
+                    console.log('خطأ في تشغيل صوت توقف العدو:', e);
+                }
+            },
+            
+            playBackgroundMusic() {
+                if (!gameData.settings.soundEnabled) return;
+                
+                try {
+                    const audio = document.getElementById('backgroundMusic');
+                    if (audio) {
+                        audio.volume = gameData.settings.musicVolume / 100;
+                        audio.play().catch(e => console.log('لم يتم تشغيل الموسيقى:', e));
+                    }
+                } catch (e) {
+                    console.log('خطأ في تشغيل الموسيقى:', e);
+                }
+            },
+            
+            updateMusicVolume() {
+                const audio = document.getElementById('backgroundMusic');
+                if (audio) {
+                    audio.volume = gameData.settings.musicVolume / 100;
+                }
+            },
+            
+            stopBackgroundMusic() {
+                const audio = document.getElementById('backgroundMusic');
+                if (audio) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+            },
+            
+            toggleSound() {
+                gameData.settings.soundEnabled = !gameData.settings.soundEnabled;
+                if (gameData.settings.soundEnabled) {
+                    this.playBackgroundMusic();
+                } else {
+                    this.stopBackgroundMusic();
+                }
             }
         };
 
@@ -925,9 +1035,20 @@
             
             // بدء إنشاء الأعداء
             startEnemySpawning();
+            
+            // بدء الموسيقى
+            SoundManager.playBackgroundMusic();
         }
 
         function resetGameState() {
+            // تنظيف المؤقتات السابقة
+            if (game.enemySpawnInterval) {
+                clearInterval(game.enemySpawnInterval);
+            }
+            if (game.autoFireInterval) {
+                clearInterval(game.autoFireInterval);
+            }
+            
             game.enemies = [];
             game.bullets = [];
             game.enemyBullets = [];
@@ -936,12 +1057,16 @@
             game.score = 0;
             game.isPaused = false;
             game.lastShot = 0;
+            game.isTouching = false;
             
             document.getElementById('currentLevel').textContent = gameData.currentLevel;
             document.getElementById('currentScore').textContent = '0';
             document.getElementById('gameCoins').textContent = '0';
             document.getElementById('gameGems').textContent = '0';
             document.getElementById('healthFill').style.width = '100%';
+            
+            // إخفاء مؤشر الإطلاق التلقائي
+            document.getElementById('autoFireIndicator').style.display = 'none';
         }
 
         function setupPlayer() {
@@ -961,92 +1086,110 @@
         }
 
         function setupControls() {
-            // إعداد الجويستيك للتحكم باللمس
-            const joystickContainer = document.getElementById('joystickContainer');
-            const joystick = document.getElementById('joystick');
-            const shootButton = document.getElementById('shootButton');
-
-            if(joystickContainer && joystick) {
-                // بدء التحكم بالجويستيك
-                joystickContainer.addEventListener('touchstart', handleJoystickStart);
-                joystickContainer.addEventListener('touchmove', handleJoystickMove);
-                joystickContainer.addEventListener('touchend', handleJoystickEnd);
-            }
-
-            if(shootButton) {
-                shootButton.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    shoot();
-                });
-            }
-
+            // التحكم باللمس - حركة الطائرة مع الإصبع
+            game.canvas.addEventListener('touchstart', handleTouchStart);
+            game.canvas.addEventListener('touchmove', handleTouchMove);
+            game.canvas.addEventListener('touchend', handleTouchEnd);
+            
+            // التحكم بالماوس للاختبار
+            game.canvas.addEventListener('mousedown', handleMouseDown);
+            game.canvas.addEventListener('mousemove', handleMouseMove);
+            game.canvas.addEventListener('mouseup', handleMouseUp);
+            
             // التحكم بلوحة المفاتيح للاختبار
             document.addEventListener('keydown', (e) => {
-                game.keys[e.key] = true;
                 if (e.key === ' ') {
                     shoot();
                 }
             });
-
-            document.addEventListener('keyup', (e) => {
-                game.keys[e.key] = false;
-            });
         }
 
-        function handleJoystickStart(e) {
+        function handleTouchStart(e) {
             e.preventDefault();
+            game.isTouching = true;
             const touch = e.touches[0];
-            const rect = e.currentTarget.getBoundingClientRect();
+            updatePlayerPosition(touch.clientX, touch.clientY);
             
-            game.joystick.active = true;
-            game.joystick.startX = rect.left + rect.width / 2;
-            game.joystick.startY = rect.top + rect.height / 2;
-            game.joystick.x = touch.clientX;
-            game.joystick.y = touch.clientY;
+            // بدء الإطلاق التلقائي
+            startAutoFire();
+            
+            // إظهار مؤشر الإطلاق التلقائي
+            document.getElementById('autoFireIndicator').style.display = 'block';
         }
 
-        function handleJoystickMove(e) {
-            if (!game.joystick.active) return;
+        function handleTouchMove(e) {
+            if (!game.isTouching) return;
             e.preventDefault();
-            
             const touch = e.touches[0];
-            const rect = e.currentTarget.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
+            updatePlayerPosition(touch.clientX, touch.clientY);
+        }
+
+        function handleTouchEnd(e) {
+            game.isTouching = false;
             
-            // حساب المسافة من المركز
-            let deltaX = touch.clientX - centerX;
-            let deltaY = touch.clientY - centerY;
+            // إيقاف الإطلاق التلقائي
+            stopAutoFire();
             
-            // تحديد الحد الأقصى للحركة
-            const maxDistance = rect.width / 2 - 30;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            // إخفاء مؤشر الإطلاق التلقائي
+            document.getElementById('autoFireIndicator').style.display = 'none';
+        }
+
+        function handleMouseDown(e) {
+            game.isTouching = true;
+            updatePlayerPosition(e.clientX, e.clientY);
             
-            if (distance > maxDistance) {
-                deltaX = (deltaX / distance) * maxDistance;
-                deltaY = (deltaY / distance) * maxDistance;
-            }
+            // بدء الإطلاق التلقائي
+            startAutoFire();
             
-            // تحديث موقع الجويستيك
-            const joystick = document.getElementById('joystick');
-            if(joystick) {
-                joystick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-            }
+            // إظهار مؤشر الإطلاق التلقائي
+            document.getElementById('autoFireIndicator').style.display = 'block';
+        }
+
+        function handleMouseMove(e) {
+            if (!game.isTouching) return;
+            updatePlayerPosition(e.clientX, e.clientY);
+        }
+
+        function handleMouseUp(e) {
+            game.isTouching = false;
             
-            // تحريك اللاعب بناءً على إدخال الجويستيك
-            game.player.x += deltaX * 0.2;
-            game.player.y += deltaY * 0.2;
+            // إيقاف الإطلاق التلقائي
+            stopAutoFire();
+            
+            // إخفاء مؤشر الإطلاق التلقائي
+            document.getElementById('autoFireIndicator').style.display = 'none';
+        }
+
+        function updatePlayerPosition(clientX, clientY) {
+            const rect = game.canvas.getBoundingClientRect();
+            game.touchX = clientX - rect.left;
+            game.touchY = clientY - rect.top;
+            
+            // تحريك الطائرة إلى موقع اللمس/المؤشر
+            game.player.x = game.touchX - game.player.width / 2;
+            game.player.y = game.touchY - game.player.height / 2;
             
             // التأكد من بقاء اللاعب داخل الشاشة
             game.player.x = Math.max(0, Math.min(game.canvas.width - game.player.width, game.player.x));
             game.player.y = Math.max(0, Math.min(game.canvas.height - game.player.height, game.player.y));
         }
 
-        function handleJoystickEnd(e) {
-            game.joystick.active = false;
-            const joystick = document.getElementById('joystick');
-            if(joystick) {
-                joystick.style.transform = 'translate(0, 0)';
+        function startAutoFire() {
+            // إطلاق النار فوراً
+            shoot();
+            
+            // ثم الاستمرار في الإطلاق كل فترة
+            game.autoFireInterval = setInterval(() => {
+                if (game.isTouching && !game.isPaused) {
+                    shoot();
+                }
+            }, game.player.fireRate);
+        }
+
+        function stopAutoFire() {
+            if (game.autoFireInterval) {
+                clearInterval(game.autoFireInterval);
+                game.autoFireInterval = null;
             }
         }
 
@@ -1062,7 +1205,6 @@
         }
 
         function update() {
-            updatePlayer();
             updateBullets();
             updateEnemies();
             updateEnemyBullets();
@@ -1071,30 +1213,9 @@
             checkCollisions();
         }
 
-        function updatePlayer() {
-            // حركة اللاعب باللمس (يتم التعامل معها في الجويستيك)
-            // حركة لوحة المفاتيح للاختبار
-            if (game.keys['ArrowLeft'] || game.keys['a']) {
-                game.player.x = Math.max(0, game.player.x - game.player.speed);
-            }
-            if (game.keys['ArrowRight'] || game.keys['d']) {
-                game.player.x = Math.min(game.canvas.width - game.player.width, game.player.x + game.player.speed);
-            }
-            if (game.keys['ArrowUp'] || game.keys['w']) {
-                game.player.y = Math.max(0, game.player.y - game.player.speed);
-            }
-            if (game.keys['ArrowDown'] || game.keys['s']) {
-                game.player.y = Math.min(game.canvas.height - game.player.height, game.player.y + game.player.speed);
-            }
-
-            // إطلاق نار تلقائي عند الضغط على زر التحكم
-            if (game.keys['Control'] && Date.now() - game.player.lastShot > game.player.fireRate) {
-                shoot();
-            }
-        }
-
         function shoot() {
             if (Date.now() - game.player.lastShot > game.player.fireRate) {
+                // إطلاق رصاصة من مركز الطائرة
                 game.bullets.push({
                     x: game.player.x + game.player.width / 2 - 2.5,
                     y: game.player.y,
@@ -1106,6 +1227,7 @@
                 });
 
                 game.player.lastShot = Date.now();
+                SoundManager.playShoot();
             }
         }
 
@@ -1119,10 +1241,42 @@
         function updateEnemies() {
             // حركة الأعداء
             game.enemies.forEach(enemy => {
-                enemy.y += enemy.speed;
+                if (enemy.stopped) {
+                    // العدو متوقف
+                    enemy.stopTimer--;
+                    if (enemy.stopTimer <= 0) {
+                        enemy.stopped = false;
+                        enemy.speed = enemy.originalSpeed;
+                    }
+                } else {
+                    // تحريك العدو
+                    enemy.y += enemy.speed;
+                    
+                    // التحقق إذا وصل العدو إلى منتصف الشاشة
+                    if (!enemy.hasStopped && enemy.y >= game.canvas.height / 3) {
+                        enemy.stopped = true;
+                        enemy.hasStopped = true;
+                        enemy.stopTimer = 300; // 5 ثوان (60 إطار في الثانية * 5)
+                        enemy.speed = 0;
+                        SoundManager.playEnemyStop();
+                        
+                        // إطلاق النار من العدو عند التوقف
+                        if (Math.random() < 0.5) {
+                            game.enemyBullets.push({
+                                x: enemy.x + enemy.width / 2 - 2.5,
+                                y: enemy.y + enemy.height,
+                                width: 5,
+                                height: 15,
+                                speed: 6,
+                                damage: 10,
+                                color: '#ef4444'
+                            });
+                        }
+                    }
+                }
                 
-                // إطلاق النار من الأعداء
-                if (Math.random() < 0.01) { // 1% فرصة كل إطار
+                // إطلاق النار العشوائي من الأعداء
+                if (!enemy.stopped && Math.random() < 0.005) {
                     game.enemyBullets.push({
                         x: enemy.x + enemy.width / 2 - 2.5,
                         y: enemy.y + enemy.height,
@@ -1170,15 +1324,15 @@
                 if (!game.isPaused) {
                     spawnEnemy();
                 }
-            }, 1000); // عدو كل ثانية
+            }, 2000); // عدو كل ثانيتين (أبطأ من السابق)
         }
 
         function spawnEnemy() {
             const level = gameData.currentLevel;
             const enemyTypes = [
-                { width: 40, height: 40, health: 30, speed: 2, color: '#ef4444', value: 10 },
-                { width: 35, height: 35, health: 20, speed: 3, color: '#f59e0b', value: 15 },
-                { width: 50, height: 50, health: 50, speed: 1, color: '#8b5cf6', value: 25 }
+                { width: 40, height: 40, health: 30, speed: 1, color: '#ef4444', value: 10 }, // أبطأ
+                { width: 35, height: 35, health: 20, speed: 1.5, color: '#f59e0b', value: 15 }, // أبطأ
+                { width: 50, height: 50, health: 50, speed: 0.8, color: '#8b5cf6', value: 25 } // أبطأ
             ];
             
             const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
@@ -1190,9 +1344,13 @@
                 height: type.height,
                 health: type.health + (level * 5),
                 maxHealth: type.health + (level * 5),
-                speed: type.speed + (level * 0.1),
+                speed: type.speed + (level * 0.05), // زيادة طفيفة مع المستوى
+                originalSpeed: type.speed + (level * 0.05),
                 color: type.color,
-                value: type.value + (level * 2)
+                value: type.value + (level * 2),
+                stopped: false,
+                hasStopped: false,
+                stopTimer: 0
             });
         }
 
@@ -1205,6 +1363,7 @@
                         game.bullets.splice(bulletIndex, 1);
                         
                         createExplosion(bullet.x, bullet.y, bullet.color);
+                        SoundManager.playExplosion();
                         
                         if (enemy.health <= 0) {
                             game.score += enemy.value;
@@ -1227,6 +1386,7 @@
                     game.player.health -= bullet.damage;
                     game.enemyBullets.splice(bulletIndex, 1);
                     createExplosion(bullet.x, bullet.y, bullet.color);
+                    SoundManager.playExplosion();
                     
                     updateHealthBar();
                     
@@ -1241,9 +1401,11 @@
                 if (isColliding(item, game.player)) {
                     if (item.type === 'coin') {
                         gameData.coins += item.value;
+                        SoundManager.playCoin();
                         showFloatingText(`+${item.value} 💰`, game.player.x, game.player.y, '#ffd54f');
                     } else if (item.type === 'gem') {
                         gameData.gems += item.value;
+                        SoundManager.playCoin();
                         showFloatingText(`+${item.value} 💎`, game.player.x, game.player.y, '#e91e63');
                     } else if (item.type === 'health') {
                         game.player.health = Math.min(game.player.maxHealth, game.player.health + 30);
@@ -1337,7 +1499,29 @@
             // رسم الأعداء
             game.enemies.forEach(enemy => {
                 game.ctx.fillStyle = enemy.color;
-                game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                
+                // تأثير خاص للعدو المتوقف
+                if (enemy.stopped) {
+                    game.ctx.save();
+                    game.ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 200) * 0.3;
+                    game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    game.ctx.restore();
+                    
+                    // رسم دائرة حول العدو المتوقف
+                    game.ctx.strokeStyle = '#ffd54f';
+                    game.ctx.lineWidth = 2;
+                    game.ctx.beginPath();
+                    game.ctx.arc(
+                        enemy.x + enemy.width / 2,
+                        enemy.y + enemy.height / 2,
+                        enemy.width + 10,
+                        0,
+                        Math.PI * 2
+                    );
+                    game.ctx.stroke();
+                } else {
+                    game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                }
                 
                 // شريط الصحة
                 const healthPercent = enemy.health / enemy.maxHealth;
@@ -1383,6 +1567,9 @@
             if(game.enemySpawnInterval) {
                 clearInterval(game.enemySpawnInterval);
             }
+            if(game.autoFireInterval) {
+                clearInterval(game.autoFireInterval);
+            }
             alert(`💀 انتهت اللعبة!\n\nالنقاط: ${game.score}\nالعملات: ${gameData.coins}\n\nاضغط موافق للعودة`);
             showScreen('startScreen');
         }
@@ -1410,7 +1597,11 @@
         }
 
         function toggleSound() {
-            alert('🔊 سيتم تفعيل الصوت في الإصدارات القادمة!');
+            SoundManager.toggleSound();
+            const btn = document.querySelector('.icon-btn[onclick="toggleSound()"]');
+            if (btn) {
+                btn.textContent = gameData.settings.soundEnabled ? '🔊' : '🔇';
+            }
         }
 
         function resetGame() {
@@ -1422,7 +1613,12 @@
                     unlockedLevels: 5,
                     selectedShip: 'basic',
                     upgrades: { weapon: 1, fireRate: 1, shield: 1, health: 1 },
-                    ships: { basic: { unlocked: true }, fighter: { unlocked: false }, tank: { unlocked: false }, sniper: { unlocked: false } }
+                    ships: { basic: { unlocked: true }, fighter: { unlocked: false }, tank: { unlocked: false }, sniper: { unlocked: false } },
+                    settings: {
+                        sfxVolume: 80,
+                        musicVolume: 60,
+                        soundEnabled: true
+                    }
                 };
                 updateCurrencyDisplay();
                 showScreen('startScreen');
@@ -1432,6 +1628,9 @@
         // ===== بدء اللعبة =====
         window.addEventListener('load', function() {
             console.log('✅ تم تحميل الصفحة بالكامل');
+            
+            // تهيئة نظام الصوت
+            SoundManager.init();
             
             setTimeout(() => {
                 const loadingScreen = document.getElementById('loadingScreen');
