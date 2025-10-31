@@ -9,6 +9,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            touch-action: manipulation;
         }
 
         :root {
@@ -26,6 +27,8 @@
             color: var(--text-primary);
             overflow: hidden;
             direction: rtl;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         /* شاشة التحميل */
@@ -328,41 +331,55 @@
             gap: 10px;
         }
 
-        /* عناصر اللعبة المرئية */
-        .player {
+        /* عناصر التحكم باللمس */
+        .touch-controls {
             position: absolute;
-            width: 50px;
-            height: 50px;
-            background: var(--primary-color);
-            border-radius: 10px;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 20px;
             z-index: 10;
         }
 
-        .enemy {
-            position: absolute;
-            background: var(--danger-color);
-            border-radius: 8px;
-            z-index: 5;
-        }
-
-        .bullet {
-            position: absolute;
-            background: #4fc3f7;
-            border-radius: 2px;
-            z-index: 8;
-        }
-
-        .explosion {
-            position: absolute;
-            background: #ff9800;
+        .joystick-container {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            z-index: 9;
-            animation: explode 0.5s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
 
-        @keyframes explode {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
+        .joystick {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            position: absolute;
+            transition: transform 0.1s ease;
+        }
+
+        .shoot-btn {
+            width: 80px;
+            height: 80px;
+            background: var(--danger-color);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            transition: all 0.1s ease;
+        }
+
+        .shoot-btn:active {
+            transform: scale(0.9);
+            background: #dc2626;
         }
 
         /* تأثيرات النص العائم */
@@ -411,6 +428,21 @@
             .nav-btn span {
                 font-size: 0.5em;
             }
+
+            .joystick-container {
+                width: 100px;
+                height: 100px;
+            }
+
+            .joystick {
+                width: 50px;
+                height: 50px;
+            }
+
+            .shoot-btn {
+                width: 70px;
+                height: 70px;
+            }
         }
     </style>
 </head>
@@ -425,7 +457,7 @@
     </div>
 
     <!-- الشاشة الرئيسية -->
-    <div id="startScreen" class="screen">
+    <div id="startScreen" class="screen active">
         <div class="game-header">
             <div class="player-stats">
                 <div class="stat-item">
@@ -451,7 +483,7 @@
             <h1 style="font-size: 3em; margin-bottom: 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🌌 Galaxy Attack</h1>
             
             <div class="main-menu">
-                <button class="menu-btn" onclick="showScreen('levelSelectScreen')">
+                <button class="menu-btn" onclick="startLevel(1)">
                     <span>🎮</span>
                     <span>بدء المغامرة</span>
                 </button>
@@ -585,6 +617,14 @@
                 <button class="icon-btn" onclick="pauseGame()">⏸️</button>
                 <button class="icon-btn" onclick="showScreen('startScreen')">🏠</button>
             </div>
+
+            <!-- عناصر التحكم باللمس -->
+            <div class="touch-controls">
+                <div class="joystick-container" id="joystickContainer">
+                    <div class="joystick" id="joystick"></div>
+                </div>
+                <button class="shoot-btn" id="shootButton">🔥</button>
+            </div>
         </div>
     </div>
 
@@ -644,7 +684,14 @@
             keys: {},
             score: 0,
             isPaused: false,
-            lastShot: 0
+            lastShot: 0,
+            joystick: {
+                active: false,
+                x: 0,
+                y: 0,
+                startX: 0,
+                startY: 0
+            }
         };
 
         // ===== دوال النظام الأساسي =====
@@ -694,16 +741,18 @@
 
         function updateCurrencyDisplay() {
             document.querySelectorAll('#totalCoins, #levelsCoins, #shipsCoins, #upgradesCoins, #gameCoins').forEach(el => {
-                el.textContent = gameData.coins;
+                if(el) el.textContent = gameData.coins;
             });
             document.querySelectorAll('#totalGems, #levelsGems, #shipsGems, #upgradesGems, #gameGems').forEach(el => {
-                el.textContent = gameData.gems;
+                if(el) el.textContent = gameData.gems;
             });
         }
 
         // ===== إنشاء المحتوى =====
         function generateLevels() {
             const levelGrid = document.getElementById('levelGrid');
+            if(!levelGrid) return;
+            
             levelGrid.innerHTML = '';
             
             for (let i = 1; i <= 20; i++) {
@@ -730,6 +779,8 @@
 
         function generateShips() {
             const shipsContainer = document.getElementById('shipsContainer');
+            if(!shipsContainer) return;
+            
             shipsContainer.innerHTML = '';
             
             const ships = [
@@ -774,6 +825,8 @@
 
         function generateUpgrades() {
             const upgradesContainer = document.getElementById('upgradesContainer');
+            if(!upgradesContainer) return;
+            
             upgradesContainer.innerHTML = '';
             
             const upgrades = [
@@ -849,7 +902,7 @@
             showScreen('gameScreen');
         }
 
-        // ===== محرك اللعبة الرئيسي =====
+        // ===== محرك اللعبة الرئيسي مع التحكم باللمس =====
         function startGame() {
             game.canvas = document.getElementById('gameCanvas');
             game.ctx = game.canvas.getContext('2d');
@@ -908,7 +961,26 @@
         }
 
         function setupControls() {
-            // لوحة المفاتيح
+            // إعداد الجويستيك للتحكم باللمس
+            const joystickContainer = document.getElementById('joystickContainer');
+            const joystick = document.getElementById('joystick');
+            const shootButton = document.getElementById('shootButton');
+
+            if(joystickContainer && joystick) {
+                // بدء التحكم بالجويستيك
+                joystickContainer.addEventListener('touchstart', handleJoystickStart);
+                joystickContainer.addEventListener('touchmove', handleJoystickMove);
+                joystickContainer.addEventListener('touchend', handleJoystickEnd);
+            }
+
+            if(shootButton) {
+                shootButton.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    shoot();
+                });
+            }
+
+            // التحكم بلوحة المفاتيح للاختبار
             document.addEventListener('keydown', (e) => {
                 game.keys[e.key] = true;
                 if (e.key === ' ') {
@@ -919,21 +991,70 @@
             document.addEventListener('keyup', (e) => {
                 game.keys[e.key] = false;
             });
+        }
 
-            // اللمس للجوال
-            game.canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const rect = game.canvas.getBoundingClientRect();
-                game.player.x = e.touches[0].clientX - rect.left - game.player.width / 2;
-            });
+        function handleJoystickStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            
+            game.joystick.active = true;
+            game.joystick.startX = rect.left + rect.width / 2;
+            game.joystick.startY = rect.top + rect.height / 2;
+            game.joystick.x = touch.clientX;
+            game.joystick.y = touch.clientY;
+        }
 
-            game.canvas.addEventListener('touchstart', () => {
-                shoot();
-            });
+        function handleJoystickMove(e) {
+            if (!game.joystick.active) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // حساب المسافة من المركز
+            let deltaX = touch.clientX - centerX;
+            let deltaY = touch.clientY - centerY;
+            
+            // تحديد الحد الأقصى للحركة
+            const maxDistance = rect.width / 2 - 30;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            if (distance > maxDistance) {
+                deltaX = (deltaX / distance) * maxDistance;
+                deltaY = (deltaY / distance) * maxDistance;
+            }
+            
+            // تحديث موقع الجويستيك
+            const joystick = document.getElementById('joystick');
+            if(joystick) {
+                joystick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            }
+            
+            // تحريك اللاعب بناءً على إدخال الجويستيك
+            game.player.x += deltaX * 0.2;
+            game.player.y += deltaY * 0.2;
+            
+            // التأكد من بقاء اللاعب داخل الشاشة
+            game.player.x = Math.max(0, Math.min(game.canvas.width - game.player.width, game.player.x));
+            game.player.y = Math.max(0, Math.min(game.canvas.height - game.player.height, game.player.y));
+        }
+
+        function handleJoystickEnd(e) {
+            game.joystick.active = false;
+            const joystick = document.getElementById('joystick');
+            if(joystick) {
+                joystick.style.transform = 'translate(0, 0)';
+            }
         }
 
         function gameLoop() {
-            if (game.isPaused) return;
+            if (game.isPaused) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
 
             update();
             render();
@@ -951,7 +1072,8 @@
         }
 
         function updatePlayer() {
-            // حركة اللاعب
+            // حركة اللاعب باللمس (يتم التعامل معها في الجويستيك)
+            // حركة لوحة المفاتيح للاختبار
             if (game.keys['ArrowLeft'] || game.keys['a']) {
                 game.player.x = Math.max(0, game.player.x - game.player.speed);
             }
@@ -1039,7 +1161,12 @@
         }
 
         function startEnemySpawning() {
-            setInterval(() => {
+            // تنظيف أي مؤقت سابق
+            if(game.enemySpawnInterval) {
+                clearInterval(game.enemySpawnInterval);
+            }
+            
+            game.enemySpawnInterval = setInterval(() => {
                 if (!game.isPaused) {
                     spawnEnemy();
                 }
@@ -1253,6 +1380,9 @@
 
         function gameOver() {
             game.isPaused = true;
+            if(game.enemySpawnInterval) {
+                clearInterval(game.enemySpawnInterval);
+            }
             alert(`💀 انتهت اللعبة!\n\nالنقاط: ${game.score}\nالعملات: ${gameData.coins}\n\nاضغط موافق للعودة`);
             showScreen('startScreen');
         }
