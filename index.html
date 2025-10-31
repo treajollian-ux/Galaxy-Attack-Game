@@ -1897,6 +1897,7 @@ function render() {
     }
 
     // رسم رصاص الأعداء
+    
     game.enemyBullets.forEach(bullet => {
         game.ctx.fillStyle = bullet.color;
         game.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
@@ -1940,4 +1941,266 @@ function gameOver() {
     
     let message = `💀 انتهت اللعبة!\n\n`;
     message += `المستوى: ${gameData.currentLevel}\n`;
-    message += `النقاط:
+    message += `النقاط:function gameOver() {
+    game.isPaused = true;
+    if(game.enemySpawnInterval) {
+        clearInterval(game.enemySpawnInterval);
+    }
+    if(game.autoFireInterval) {
+        clearInterval(game.autoFireInterval);
+    }
+    
+    // حساب المكافأة بناءً على المستوى
+    const baseReward = 50;
+    const levelReward = Math.floor(baseReward * Math.pow(1.5, Math.floor((gameData.currentLevel-1)/5)));
+    const scoreReward = Math.floor(game.score / 10);
+    const totalReward = levelReward + scoreReward;
+    
+    gameData.coins += totalReward;
+    
+    let message = `💀 انتهت اللعبة!\n\n`;
+    message += `المستوى: ${gameData.currentLevel}\n`;
+    message += `النقاط: ${game.score}\n`;
+    message += `المكافأة: +${totalReward} 💰\n\n`;
+    message += `حاول مرة أخرى للوصول إلى مستوى أعلى!`;
+    
+    alert(message);
+    showScreen('levelSelectScreen');
+}
+
+// ===== نظام المكافآت المحسن =====
+function calculateLevelReward(level) {
+    const baseReward = 50;
+    // تضاعف المكافأة كل 5 مستويات
+    const multiplier = Math.pow(2, Math.floor((level - 1) / 5));
+    return Math.floor(baseReward * multiplier);
+}
+
+// ===== زيادة الصعوبة التدريجية =====
+function getDifficultyMultiplier(level) {
+    return 1 + (level * 0.15); // زيادة 15% صعوبة لكل مستوى
+}
+
+// تحديث دالة spawnEnemy لاستخدام نظام الصعوبة
+function spawnEnemy() {
+    const level = gameData.currentLevel;
+    const difficulty = getDifficultyMultiplier(level);
+    
+    const enemyTypes = [
+        { width: 40, height: 40, health: 30, speed: 1, color: '#ef4444', value: 10 },
+        { width: 35, height: 35, health: 20, speed: 1.5, color: '#f59e0b', value: 15 },
+        { width: 50, height: 50, health: 50, speed: 0.8, color: '#8b5cf6', value: 25 }
+    ];
+    
+    const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+    
+    game.enemies.push({
+        x: Math.random() * (game.canvas.width - type.width),
+        y: -type.height,
+        width: type.width,
+        height: type.height,
+        health: type.health * difficulty,
+        maxHealth: type.health * difficulty,
+        speed: type.speed * (1 + (level * 0.02)), // زيادة السرعة مع المستوى
+        originalSpeed: type.speed * (1 + (level * 0.02)),
+        color: type.color,
+        value: Math.floor(type.value * difficulty),
+        stopped: false,
+        hasStopped: false,
+        stopTimer: 0
+    });
+}
+
+// ===== نظام الوحش الكبير المحسن =====
+function spawnBoss() {
+    game.bossActive = true;
+    const level = gameData.currentLevel;
+    const difficulty = getDifficultyMultiplier(level);
+    
+    // إظهار تحذير البوس
+    const bossWarning = document.getElementById('bossWarning');
+    bossWarning.style.display = 'block';
+    
+    // تحديث نص التحذير حسب اللغة
+    const arText = bossWarning.querySelector('[data-lang="ar"]');
+    const enText = bossWarning.querySelector('[data-lang="en"]');
+    if (gameData.settings.language === 'ar') {
+        arText.style.display = 'inline';
+        enText.style.display = 'none';
+    } else {
+        arText.style.display = 'none';
+        enText.style.display = 'inline';
+    }
+    
+    setTimeout(() => {
+        bossWarning.style.display = 'none';
+    }, 3000);
+    
+    game.boss = {
+        x: game.canvas.width / 2 - 75,
+        y: 50,
+        width: 150,
+        height: 100,
+        health: Math.floor(500 * difficulty),
+        maxHealth: Math.floor(500 * difficulty),
+        speedX: 2 + (level * 0.1),
+        speedY: 1 + (level * 0.05),
+        color: '#dc2626',
+        value: Math.floor(500 * difficulty),
+        lastShot: 0,
+        rewardGiven: false
+    };
+    
+    // إيقاف ظهور الأعداء العاديين
+    if (game.enemySpawnInterval) {
+        clearInterval(game.enemySpawnInterval);
+    }
+}
+
+// ===== تحسين نظام اللغة في الإعدادات =====
+function setupLanguageSettings() {
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.value = gameData.settings.language;
+        languageSelect.addEventListener('change', (e) => {
+            changeLanguage(e.target.value);
+        });
+    }
+}
+
+// تحديث دالة changeLanguage
+function changeLanguage(lang) {
+    gameData.settings.language = lang;
+    
+    // تحديث أزرار اللغة في الإعدادات
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.textContent === (lang === 'ar' ? 'العربية' : 'English')) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // تحديث جميع النصوص في الواجهة
+    document.querySelectorAll('[data-lang]').forEach(element => {
+        if (element.getAttribute('data-lang') === lang) {
+            element.style.display = 'inline';
+        } else {
+            element.style.display = 'none';
+        }
+    });
+    
+    // إعادة إنشاء المحتوى الديناميكي
+    generateLevels();
+    generateShips();
+    generateUpgrades();
+}
+
+// ===== دوال مساعدة إضافية =====
+function showFloatingText(text, x, y, color = '#ffffff') {
+    const floatingText = document.createElement('div');
+    floatingText.className = 'floating-text';
+    floatingText.textContent = text;
+    floatingText.style.color = color;
+    floatingText.style.left = x + 'px';
+    floatingText.style.top = y + 'px';
+    
+    document.getElementById('gameScreen').appendChild(floatingText);
+    
+    setTimeout(() => {
+        floatingText.remove();
+    }, 1500);
+}
+
+function pauseGame() {
+    game.isPaused = !game.isPaused;
+    const btn = document.querySelector('.game-controls .icon-btn');
+    if (btn) {
+        btn.textContent = game.isPaused ? '▶️' : '⏸️';
+    }
+    
+    if (game.isPaused) {
+        SoundManager.stopBackgroundMusic();
+    } else {
+        SoundManager.playBackgroundMusic();
+    }
+}
+
+function resetGame() {
+    if (confirm(gameData.settings.language === 'ar' ? 
+        'هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم حذف كل التقدم!' :
+        'Are you sure you want to reset the game? All progress will be lost!')) {
+        
+        gameData = {
+            coins: 1000,
+            gems: 50,
+            currentLevel: 1,
+            unlockedLevels: 1,
+            selectedShip: 'basic',
+            upgrades: {
+                weapon: 1,
+                fireRate: 1,
+                shield: 1,
+                health: 1,
+                doubleShot: false
+            },
+            ships: {
+                basic: { unlocked: true, level: 1 },
+                fighter: { unlocked: false, level: 1 },
+                tank: { unlocked: false, level: 1 },
+                sniper: { unlocked: false, level: 1 }
+            },
+            settings: gameData.settings, // الحفاظ على الإعدادات
+            completedLevels: []
+        };
+        
+        updateCurrencyDisplay();
+        generateLevels();
+        generateShips();
+        generateUpgrades();
+        
+        showFloatingText('🔄 تم إعادة تعيين اللعبة', window.innerWidth/2, window.innerHeight/2, '#4caf50');
+    }
+}
+
+// ===== تهيئة اللعبة عند التحميل =====
+window.addEventListener('load', function() {
+    console.log('🚀 Galaxy Attack جاهز للانطلاق!');
+    
+    // إخفاء شاشة التحميل
+    setTimeout(() => {
+        document.getElementById('loadingScreen').style.display = 'none';
+        showScreen('startScreen');
+        
+        // تهيئة نظام الصوت
+        SoundManager.init();
+        
+        // تهيئة إعدادات اللغة
+        setupLanguageSettings();
+        
+        // تحديث العرض الأولي
+        updateCurrencyDisplay();
+        generateLevels();
+        generateShips();
+        generateUpgrades();
+        
+    }, 2000);
+});
+
+// التحكم في حجم النافذة
+window.addEventListener('resize', function() {
+    if (game.canvas) {
+        game.canvas.width = window.innerWidth;
+        game.canvas.height = window.innerHeight;
+    }
+});
+
+// تعريف الدوال العامة
+window.toggleSound = SoundManager.toggleSound.bind(SoundManager);
+window.showScreen = showScreen;
+window.changeLanguage = changeLanguage;
+window.startLevel = startLevel;
+window.selectShip = selectShip;
+window.buyShip = buyShip;
+window.buyUpgrade = buyUpgrade;
+window.pauseGame = pauseGame;
+window.resetGame = resetGame;
