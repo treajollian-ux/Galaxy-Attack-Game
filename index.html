@@ -9,6 +9,31 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/animations.css">
 </head>
+    <script>
+// كود تصحيح سريع
+console.log('✅ تم تحميل HTML بنجاح');
+
+// تحقق من تحميل العناصر الأساسية
+window.addEventListener('load', function() {
+    console.log('✅ window.load حدث بنجاح');
+    
+    const loadingScreen = document.getElementById('loadingScreen');
+    const gameContainer = document.getElementById('gameContainer');
+    
+    console.log('🖥️ loadingScreen:', loadingScreen);
+    console.log('🎮 gameContainer:', gameContainer);
+    
+    // إذا استمرت المشكلة، إخفاء شاشة التحميل يدوياً بعد 3 ثوان
+    setTimeout(() => {
+        if (loadingScreen && loadingScreen.style.display !== 'none') {
+            console.log('🕒 إخفاء شاشة التحميل تلقائياً بعد timeout');
+            loadingScreen.style.display = 'none';
+            if (gameContainer) gameContainer.style.display = 'block';
+            document.getElementById('startScreen').classList.add('active');
+        }
+    }, 3000);
+});
+</script>
 <body>
     <!-- Loading Screen -->
     <div id="loadingScreen" class="screen active">
