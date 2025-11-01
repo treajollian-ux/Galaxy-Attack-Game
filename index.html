@@ -789,6 +789,56 @@
     <audio id="bossSound" preload="auto"></audio>
 
     <script>
+        // ===== نظام الصور المحسن =====
+        const ImageManager = {
+            images: {},
+            loaded: false,
+            
+            init() {
+                console.log('🖼️ بدء تحميل الصور...');
+                return this.loadAllImages();
+            },
+            
+            loadAllImages() {
+                // 🔄 استبدل هذه الروابط بروابط صورك من GitHub
+                const imageUrls = {
+                    background: 'https://raw.githubusercontent.com/treajollian-ux/Galaxy-Attack-Game/main/images/_background.png',
+                    player: 'https://raw.githubusercontent.com/treajollian-ux/Galaxy-Attack-Game/main/images/_player.png',
+                    enemy: 'https://raw.githubusercontent.com/treajollian-ux/Galaxy-Attack-Game/main/images/_enemy.png',
+                    boss: 'https://raw.githubusercontent.com/treajollian-ux/Galaxy-Attack-Game/main/images/_boss.png',
+                    tank: 'https://raw.githubusercontent.com/treajollian-ux/Galaxy-Attack-Game/main/images/_tank.png'
+                };
+                
+                const promises = Object.keys(imageUrls).map(key => {
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.onload = () => {
+                            this.images[key] = img;
+                            console.log(`✅ تم تحميل صورة: ${key}`);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            console.log(`❌ فشل تحميل صورة: ${key}`);
+                            // استخدام لون بديل إذا فشل تحميل الصورة
+                            this.images[key] = null;
+                            resolve();
+                        };
+                        img.src = imageUrls[key];
+                    });
+                });
+                
+                return Promise.all(promises).then(() => {
+                    this.loaded = true;
+                    console.log('✅ تم تحميل جميع الصور');
+                });
+            },
+            
+            getImage(type) {
+                return this.images[type] || null;
+            }
+        };
+
         // ===== نظام النجوم المتحركة =====
         function createStars() {
             const starsContainer = document.getElementById('starsContainer');
@@ -995,7 +1045,12 @@
             autoFireInterval: null,
             boss: null,
             bossActive: false,
-            backgroundStars: []
+            backgroundStars: [],
+            levelTime: 0,
+            levelDuration: 60000, // 60 ثانية لكل مستوى
+            enemiesDefeated: 0,
+            enemiesToDefeat: 10, // عدد الأعداء المطلوب هزيمته لكل مستوى
+            levelComplete: false
         };
 
         // ===== دوال النظام الأساسي =====
@@ -1302,6 +1357,11 @@
             game.boss = null;
             game.bossActive = false;
             game.backgroundStars = [];
+            game.levelTime = 0;
+            game.levelDuration = 60000; // 60 ثانية لكل مستوى
+            game.enemiesDefeated = 0;
+            game.enemiesToDefeat = 10 + (gameData.currentLevel * 2); // زيادة عدد الأعداء مع كل مستوى
+            game.levelComplete = false;
             
             document.getElementById('currentLevel').textContent = gameData.currentLevel;
             document.getElementById('currentScore').textContent = '0';
@@ -1327,12 +1387,11 @@
         function setupPlayer() {
             const doubleShotBonus = gameData.upgrades.doubleShot ? 1.5 : 1;
             
-            // زيادة حجم الطائرة بشكل كبير
             game.player = {
-                x: game.canvas.width / 2 - 40, // زيادة العرض
-                y: game.canvas.height - 150,   // رفع الطائرة أعلى
-                width: 80,  // زيادة الحجم
-                height: 80, // زيادة الحجم
+                x: game.canvas.width / 2 - 40,
+                y: game.canvas.height - 150,
+                width: 80,
+                height: 80,
                 speed: 8,
                 health: 100 + (gameData.upgrades.health * 25),
                 maxHealth: 100 + (gameData.upgrades.health * 25),
@@ -1340,7 +1399,8 @@
                 lastShot: 0,
                 fireRate: Math.max(100, 300 - (gameData.upgrades.fireRate * 20)) * doubleShotBonus,
                 damage: 25 + (gameData.upgrades.weapon * 15),
-                hasDoubleShot: gameData.upgrades.doubleShot
+                hasDoubleShot: gameData.upgrades.doubleShot,
+                image: ImageManager.getImage('player')
             };
         }
 
@@ -1478,6 +1538,22 @@
             updateParticles();
             updateLoot();
             checkCollisions();
+            checkLevelProgress();
+        }
+
+        function checkLevelProgress() {
+            if (game.levelComplete) return;
+            
+            // زيادة وقت المستوى
+            game.levelTime += 16; // تقريباً 16ms لكل frame
+            
+            // التحقق من انتهاء المستوى إما بالوقت أو بعدد الأعداء
+            if (game.levelTime >= game.levelDuration || game.enemiesDefeated >= game.enemiesToDefeat) {
+                game.levelComplete = true;
+                setTimeout(() => {
+                    levelComplete();
+                }, 1000);
+            }
         }
 
         function updateBackgroundStars() {
@@ -1518,15 +1594,16 @@
                     }
                 }
                 
-                if (!enemy.stopped && Math.random() < 0.005) {
+                // جعل إطلاق النار أبطأ (كرات نار بطيئة)
+                if (!enemy.stopped && Math.random() < 0.002) {
                     game.enemyBullets.push({
                         x: enemy.x + enemy.width / 2 - 4,
                         y: enemy.y + enemy.height,
-                        width: 8,
-                        height: 20,
-                        speed: 6,
+                        width: 12, // جعل كرات النار أكبر
+                        height: 12,
+                        speed: 3, // جعلها أبطأ
                         damage: 10,
-                        color: '#ef4444'
+                        color: '#f59e0b' // لون ناري
                     });
                 }
             });
@@ -1539,9 +1616,18 @@
             const difficulty = 1 + (level * 0.15);
             
             const enemyTypes = [
-                { width: 70, height: 70, health: 30, speed: 1, color: '#ef4444', value: 10 },
-                { width: 60, height: 60, health: 20, speed: 1.5, color: '#f59e0b', value: 15 },
-                { width: 90, height: 90, health: 50, speed: 0.8, color: '#8b5cf6', value: 25 }
+                { 
+                    width: 70, height: 70, health: 30, speed: 0.5, // جعل الحركة أبطأ
+                    color: '#ef4444', value: 10, image: ImageManager.getImage('enemy') 
+                },
+                { 
+                    width: 60, height: 60, health: 20, speed: 0.8, // جعل الحركة أبطأ
+                    color: '#f59e0b', value: 15, image: ImageManager.getImage('enemy') 
+                },
+                { 
+                    width: 90, height: 90, health: 50, speed: 0.3, // جعل الحركة أبطأ
+                    color: '#8b5cf6', value: 25, image: ImageManager.getImage('tank') 
+                }
             ];
             
             const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
@@ -1549,17 +1635,18 @@
             game.enemies.push({
                 x: Math.random() * (game.canvas.width - type.width),
                 y: -type.height,
-                width: type.width,  // زيادة حجم الأعداء
-                height: type.height, // زيادة حجم الأعداء
+                width: type.width,
+                height: type.height,
                 health: type.health * difficulty,
                 maxHealth: type.health * difficulty,
-                speed: type.speed * (1 + (level * 0.02)),
-                originalSpeed: type.speed * (1 + (level * 0.02)),
+                speed: type.speed * (1 + (level * 0.01)), // زيادة طفيفة في السرعة مع المستوى
+                originalSpeed: type.speed * (1 + (level * 0.01)),
                 color: type.color,
                 value: Math.floor(type.value * difficulty),
                 stopped: false,
                 hasStopped: false,
-                stopTimer: 0
+                stopTimer: 0,
+                image: type.image
             });
         }
 
@@ -1568,10 +1655,11 @@
             
             if(game.enemySpawnInterval) clearInterval(game.enemySpawnInterval);
             
-            const spawnRate = Math.max(500, 2000 - (gameData.currentLevel * 50));
+            // زيادة وتيرة ظهور الأعداء مع كل مستوى
+            const spawnRate = Math.max(300, 1500 - (gameData.currentLevel * 30));
             
             game.enemySpawnInterval = setInterval(() => {
-                if (!game.isPaused && !game.bossActive) spawnEnemy();
+                if (!game.isPaused && !game.bossActive && !game.levelComplete) spawnEnemy();
             }, spawnRate);
         }
 
@@ -1612,6 +1700,7 @@
             game.bossActive = true;
             const level = gameData.currentLevel;
             const difficulty = 1 + (level * 0.15);
+            const bossImage = ImageManager.getImage('boss');
             
             const bossWarning = document.getElementById('bossWarning');
             bossWarning.style.display = 'block';
@@ -1630,12 +1719,11 @@
                 bossWarning.style.display = 'none';
             }, 3000);
             
-            // زيادة حجم البوس بشكل كبير
             game.boss = {
                 x: game.canvas.width / 2 - 120,
                 y: 50,
-                width: 240,  // زيادة كبيرة في الحجم
-                height: 160, // زيادة كبيرة في الحجم
+                width: 240,
+                height: 160,
                 health: Math.floor(500 * difficulty),
                 maxHealth: Math.floor(500 * difficulty),
                 speedX: 2 + (level * 0.1),
@@ -1643,7 +1731,8 @@
                 color: '#dc2626',
                 value: Math.floor(500 * difficulty),
                 lastShot: 0,
-                rewardGiven: false
+                rewardGiven: false,
+                image: bossImage
             };
             
             if (game.enemySpawnInterval) clearInterval(game.enemySpawnInterval);
@@ -1690,6 +1779,7 @@
                         if (enemy.health <= 0) {
                             game.score += enemy.value;
                             gameData.coins += Math.floor(enemy.value / 2);
+                            game.enemiesDefeated++;
                             
                             createLoot(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
                             game.enemies.splice(enemyIndex, 1);
@@ -1716,6 +1806,7 @@
                         game.score += game.boss.value;
                         gameData.coins += Math.floor(game.boss.value / 2);
                         gameData.gems += 5;
+                        game.enemiesDefeated += 10; // يعتبر البوس 10 أعداء
                         
                         createLoot(game.boss.x + game.boss.width / 2, game.boss.y + game.boss.height / 2, true);
                         game.bossActive = false;
@@ -1723,8 +1814,6 @@
                         
                         updateGameUI();
                         showFloatingText(`+${game.boss.value} نقاط +5 💎`, game.canvas.width/2, game.canvas.height/2, '#fbbf24');
-                        
-                        setTimeout(() => levelComplete(), 2000);
                     }
                     updateGameUI();
                 }
@@ -1845,6 +1934,7 @@
             
             let message = `🎉 أكملت المستوى ${gameData.currentLevel}!\n\n`;
             message += `النقاط: ${game.score}\n`;
+            message += `الأعداء المهزومين: ${game.enemiesDefeated}/${game.enemiesToDefeat}\n`;
             message += `المكافأة: +${reward} 💰\n\n`;
             
             if (gameData.currentLevel % 10 === 0) {
@@ -1873,6 +1963,7 @@
             let message = `💀 انتهت اللعبة!\n\n`;
             message += `المستوى: ${gameData.currentLevel}\n`;
             message += `النقاط: ${game.score}\n`;
+            message += `الأعداء المهزومين: ${game.enemiesDefeated}/${game.enemiesToDefeat}\n`;
             message += `المكافأة: +${totalReward} 💰\n\n`;
             message += `حاول مرة أخرى للوصول إلى مستوى أعلى!`;
             
@@ -1881,12 +1972,18 @@
         }
 
         function render() {
-            // خلفية متدرجة مع النجوم
-            const gradient = game.ctx.createLinearGradient(0, 0, 0, game.canvas.height);
-            gradient.addColorStop(0, '#0a0a1a');
-            gradient.addColorStop(1, '#1e3a8a');
-            game.ctx.fillStyle = gradient;
-            game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
+            // رسم الخلفية مع الصورة
+            const bgImage = ImageManager.getImage('background');
+            if (bgImage) {
+                game.ctx.drawImage(bgImage, 0, 0, game.canvas.width, game.canvas.height);
+            } else {
+                // خلفية بديلة إذا لم تتحميل الصورة
+                const gradient = game.ctx.createLinearGradient(0, 0, 0, game.canvas.height);
+                gradient.addColorStop(0, '#0a0a1a');
+                gradient.addColorStop(1, '#1e3a8a');
+                game.ctx.fillStyle = gradient;
+                game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height);
+            }
             
             // رسم النجوم المتحركة
             game.ctx.fillStyle = '#ffffff';
@@ -1896,46 +1993,17 @@
                 game.ctx.fill();
             });
 
-            // رسم الغنائم
-            game.loot.forEach(item => {
-                game.ctx.fillStyle = item.color;
-                game.ctx.fillRect(item.x, item.y, item.width, item.height);
-                
-                // إضافة تأثير لمعان للغنائم
-                game.ctx.shadowColor = item.color;
-                game.ctx.shadowBlur = 15;
-                game.ctx.fillRect(item.x, item.y, item.width, item.height);
-                game.ctx.shadowBlur = 0;
-            });
-
-            // رسم الجسيمات
-            game.particles.forEach(particle => {
-                const alpha = particle.life / particle.maxLife;
-                game.ctx.save();
-                game.ctx.globalAlpha = alpha;
-                game.ctx.fillStyle = particle.color;
-                game.ctx.shadowColor = particle.color;
-                game.ctx.shadowBlur = 10;
-                game.ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
-                game.ctx.restore();
-            });
-
-            // رسم الأعداء مع تأثيرات
+            // رسم الأعداء بالصور
             game.enemies.forEach(enemy => {
-                // جسم العدو
-                game.ctx.fillStyle = enemy.color;
-                game.ctx.shadowColor = enemy.color;
-                game.ctx.shadowBlur = 15;
-                
-                if (enemy.stopped) {
-                    game.ctx.save();
-                    game.ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 200) * 0.3;
-                    game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-                    game.ctx.restore();
+                if (enemy.image) {
+                    game.ctx.drawImage(enemy.image, enemy.x, enemy.y, enemy.width, enemy.height);
                 } else {
+                    game.ctx.fillStyle = enemy.color;
+                    game.ctx.shadowColor = enemy.color;
+                    game.ctx.shadowBlur = 15;
                     game.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    game.ctx.shadowBlur = 0;
                 }
-                game.ctx.shadowBlur = 0;
                 
                 // شريط الصحة
                 const healthPercent = enemy.health / enemy.maxHealth;
@@ -1945,23 +2013,17 @@
                 game.ctx.fillRect(enemy.x, enemy.y - 12, enemy.width * healthPercent, 6);
             });
 
-            // رسم البوس مع تأثيرات
+            // رسم البوس بالصورة
             if (game.bossActive && game.boss) {
-                // جسم البوس
-                game.ctx.fillStyle = game.boss.color;
-                game.ctx.shadowColor = game.boss.color;
-                game.ctx.shadowBlur = 25;
-                game.ctx.fillRect(game.boss.x, game.boss.y, game.boss.width, game.boss.height);
-                game.ctx.shadowBlur = 0;
-                
-                // عيون البوس
-                game.ctx.fillStyle = '#000000';
-                game.ctx.fillRect(game.boss.x + 50, game.boss.y + 40, 25, 25);
-                game.ctx.fillRect(game.boss.x + game.boss.width - 75, game.boss.y + 40, 25, 25);
-                
-                // فم البوس
-                game.ctx.fillStyle = '#000000';
-                game.ctx.fillRect(game.boss.x + 80, game.boss.y + 100, 80, 15);
+                if (game.boss.image) {
+                    game.ctx.drawImage(game.boss.image, game.boss.x, game.boss.y, game.boss.width, game.boss.height);
+                } else {
+                    game.ctx.fillStyle = game.boss.color;
+                    game.ctx.shadowColor = game.boss.color;
+                    game.ctx.shadowBlur = 25;
+                    game.ctx.fillRect(game.boss.x, game.boss.y, game.boss.width, game.boss.height);
+                    game.ctx.shadowBlur = 0;
+                }
                 
                 // شريط صحة البوس
                 game.ctx.fillStyle = '#dc2626';
@@ -1974,12 +2036,15 @@
                 game.ctx.strokeRect(50, 20, game.canvas.width - 100, 25);
             }
 
-            // رسم رصاص الأعداء
+            // رسم رصاص الأعداء (كرات نار)
             game.enemyBullets.forEach(bullet => {
+                // جعل كرات النار أكثر إشراقاً
                 game.ctx.fillStyle = bullet.color;
                 game.ctx.shadowColor = bullet.color;
-                game.ctx.shadowBlur = 8;
-                game.ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                game.ctx.shadowBlur = 15;
+                game.ctx.beginPath();
+                game.ctx.arc(bullet.x + bullet.width/2, bullet.y + bullet.height/2, bullet.width/2, 0, Math.PI * 2);
+                game.ctx.fill();
                 game.ctx.shadowBlur = 0;
             });
 
@@ -1992,17 +2057,27 @@
                 game.ctx.shadowBlur = 0;
             });
 
-            // رسم اللاعب مع تأثيرات
-            game.ctx.fillStyle = game.player.color;
-            game.ctx.shadowColor = game.player.color;
-            game.ctx.shadowBlur = 20;
-            game.ctx.fillRect(game.player.x, game.player.y, game.player.width, game.player.height);
-            game.ctx.shadowBlur = 0;
+            // رسم اللاعب بالصورة
+            if (game.player.image) {
+                game.ctx.drawImage(game.player.image, game.player.x, game.player.y, game.player.width, game.player.height);
+            } else {
+                game.ctx.fillStyle = game.player.color;
+                game.ctx.shadowColor = game.player.color;
+                game.ctx.shadowBlur = 20;
+                game.ctx.fillRect(game.player.x, game.player.y, game.player.width, game.player.height);
+                game.ctx.shadowBlur = 0;
+            }
             
             // تأثيرات خاصة للاعب
             game.ctx.strokeStyle = 'rgba(79, 195, 247, 0.6)';
             game.ctx.lineWidth = 4;
             game.ctx.strokeRect(game.player.x - 4, game.player.y - 4, game.player.width + 8, game.player.height + 8);
+
+            // عرض تقدم المستوى
+            game.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            game.ctx.font = '16px Arial';
+            game.ctx.fillText(`الوقت: ${Math.ceil((game.levelDuration - game.levelTime) / 1000)} ثانية`, game.canvas.width - 200, 30);
+            game.ctx.fillText(`الأعداء: ${game.enemiesDefeated}/${game.enemiesToDefeat}`, game.canvas.width - 200, 60);
         }
 
         function updateGameUI() {
@@ -2084,38 +2159,53 @@
             }
         }
 
-        // ===== تهيئة اللعبة عند التحميل =====
+        // ===== تهيئة اللعبة مع الصور =====
         window.addEventListener('load', function() {
             console.log('🚀 بدء تحميل Galaxy Attack...');
             
             createStars();
             
-            setTimeout(() => {
-                try {
+            // تحميل الصور أولاً ثم بدء اللعبة
+            ImageManager.init().then(() => {
+                setTimeout(() => {
+                    try {
+                        document.getElementById('loadingScreen').style.display = 'none';
+                        showScreen('startScreen');
+                        
+                        SoundManager.init();
+                        updateCurrencyDisplay();
+                        generateLevels();
+                        generateShips();
+                        generateUpgrades();
+                        
+                        console.log('✅ Galaxy Attack جاهز للانطلاق!');
+                        
+                    } catch (error) {
+                        console.error('❌ خطأ في التهيئة:', error);
+                        document.getElementById('loadingScreen').innerHTML = `
+                            <div class="loading-content">
+                                <h2 style="color: #ef4444; font-size: 2em;">❌ خطأ في التحميل</h2>
+                                <p style="font-size: 1.2em;">حدث خطأ في تحميل اللعبة</p>
+                                <button onclick="location.reload()" style="padding: 15px 30px; background: #6366f1; color: white; border: none; border-radius: 10px; margin-top: 20px; font-size: 1.1em; font-weight: bold;">
+                                    إعادة تحميل الصفحة
+                                </button>
+                            </div>
+                        `;
+                    }
+                }, 2000);
+            }).catch(error => {
+                console.error('❌ فشل تحميل الصور:', error);
+                // الاستمرار حتى مع فشل تحميل الصور
+                setTimeout(() => {
                     document.getElementById('loadingScreen').style.display = 'none';
                     showScreen('startScreen');
-                    
                     SoundManager.init();
                     updateCurrencyDisplay();
                     generateLevels();
                     generateShips();
                     generateUpgrades();
-                    
-                    console.log('✅ Galaxy Attack جاهز للانطلاق!');
-                    
-                } catch (error) {
-                    console.error('❌ خطأ في التهيئة:', error);
-                    document.getElementById('loadingScreen').innerHTML = `
-                        <div class="loading-content">
-                            <h2 style="color: #ef4444; font-size: 2em;">❌ خطأ في التحميل</h2>
-                            <p style="font-size: 1.2em;">حدث خطأ في تحميل اللعبة</p>
-                            <button onclick="location.reload()" style="padding: 15px 30px; background: #6366f1; color: white; border: none; border-radius: 10px; margin-top: 20px; font-size: 1.1em; font-weight: bold;">
-                                إعادة تحميل الصفحة
-                            </button>
-                        </div>
-                    `;
-                }
-            }, 2000);
+                }, 2000);
+            });
         });
 
         window.addEventListener('resize', function() {
